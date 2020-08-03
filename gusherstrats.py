@@ -39,6 +39,7 @@ map = 'sg'
 G = load_map(map)
 
 plt.plot()
+plt.title(G.graph['name'])
 pos = nx.kamada_kawai_layout(G)
 pos_attrs = {node: (coord[0]-0.08, coord[1]+0.1) for (node, coord) in pos.items()}
 nx.draw_networkx(G, pos, edge_color='#888888', font_color='#ffffff')
