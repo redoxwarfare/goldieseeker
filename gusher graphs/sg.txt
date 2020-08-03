@@ -1,0 +1,10 @@
+$Spawning Grounds
+a b d g h
+b c d g i
+c d e f g
+d e f g
+e f
+f
+g h
+i
+${'bcd': 4, 'ag': 3, '.': 2}
