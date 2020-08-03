@@ -17,10 +17,8 @@ def load_map(mapname=None):
         name = f.readline().split(COMMENTCHAR)[-1]
         G.graph['name'] = name
 
-        # Read the penalty dictionary from the last line of the file
-        for line in f:
-            pass
-        penalties = l_eval(line.split(COMMENTCHAR)[-1])
+        # Read the penalty dictionary from the second line of the file
+        penalties = l_eval(f.readline().split(COMMENTCHAR)[-1])
 
         # For each node, check if its name is in any of the penalty groups and assign the corresponding penalty value
         # If no matches are found, assign the default penalty
