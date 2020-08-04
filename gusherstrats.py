@@ -15,6 +15,7 @@ class BNode:
         self.penalty = G.nodes[name]['penalty']  # penalty for opening this gusher
         self.cost = 0  # if Goldie is in this gusher, total penalty incurred by following decision tree
         self.obj = 0  # objective function evaluated on subtree with this node as root
+        # TODO - need to fix objective score to properly implement dynamic programming?
 
     def addchildren(self, low=None, high=None, *n):
         objL = 0
@@ -80,7 +81,10 @@ def load_map(mapname=None):
     return G
 
 
+# TODO - write more thorough version of optimalstrat that checks all possible trees and uses dynamic programming
+
 def optimalstrat(G):
+    """Build an optimal decision tree for the gusher graph G."""
     n = len(G)
     # Base cases
     if n == 0:
