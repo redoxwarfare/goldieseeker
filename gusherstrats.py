@@ -45,7 +45,15 @@ class BNode:
     def __repr__(self):
         return f'{{{self.name} > {self.high} ({self.low}), p: {self.penalty}, c: {self.cost}, o: {self.obj}}}'
 
-    def writestrat(self):  # TODO - replace with a better pretty-printer
+    def writetree(self):
+        # TODO - BFS-based pretty printer
+        pass
+
+    def writestrat(self):
+        """Write the strategy encoded by the subtree rooted at this node in a compact, human-readable format.\n
+        The output string consists of a 'high group' followed by a list of comma-separated 'low groups', bracketed by
+        parentheses. Open gushers in the high group left-to-right. If the kth gusher in the group is low, jump to the
+        kth low group in the list."""
         s = ""
         high = self
         lows = deque([deque()])
