@@ -28,7 +28,7 @@ class BNode:
             self.high.update(self.penalty)
             objH = self.high.obj
         if n:
-            self.obj = self.penalty*(n-1) + objL + objH
+            self.obj = self.penalty * (n - 1) + objL + objH
 
     def update(self, p):  # only works if tree is built from bottom up
         self.cost += p
@@ -127,7 +127,7 @@ if __name__ == '__main__':
     nodes['i'].addchildren(None, nodes['b'])
     nodes['h'].addchildren(nodes['i'], nodes['g'])
     nodes['f'].addchildren(nodes['h'], nodes['e'])
-    print(recstrat.strat2str())
+    print(f'recommended strat: {recstrat.strat2str()}')
 
     optstrat = optimalstrat(G)
-    print(optstrat.strat2str())
+    print(f'algorithm\'s strat: {optstrat.strat2str()}')
