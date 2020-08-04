@@ -10,26 +10,32 @@ DEFAULTCHAR = '.'
 class BNode:
     def __init__(self, G, name):
         self.name = name
-        self.low = None # next gusher to open if this gusher is low
-        self.high = None # next gusher to open if this gusher is high
-        self.penalty = G.nodes[name]['penalty'] # penalty for opening this gusher
-        self.cost = 0 # if Goldie is in this gusher, total penalty incurred by finding Goldie according to decision tree
-        self.obj = 0 # objective function evaluated on subtree with this node as root
+        self.low = None  # next gusher to open if this gusher is low
+        self.high = None  # next gusher to open if this gusher is high
+        self.penalty = G.nodes[name]['penalty']  # penalty for opening this gusher
+        self.cost = 0  # if Goldie is in this gusher, total penalty incurred by following decision tree
+        self.obj = 0  # objective function evaluated on subtree with this node as root
 
-    def addchildren(self, low=None, high=None):
+    def addchildren(self, low=None, high=None, *n):
+        objL = 0
+        objH = 0
         if low:
             self.low = low
-            self.low.updatecost(self.penalty)
+            self.low.update(self.penalty)
+            objL = self.low.obj
         if high:
             self.high = high
-            self.high.updatecost(self.penalty)
+            self.high.update(self.penalty)
+            objH = self.high.obj
+        if n:
+            self.obj = self.penalty*(n-1) + objL + objH
 
-    def updatecost(self, p): # only works if tree is built from bottom up
+    def update(self, p):  # only works if tree is built from bottom up
         self.cost += p
         if self.low:
-            self.low.updatecost(p)
+            self.low.update(p)
         if self.high:
-            self.high.updatecost(p)
+            self.high.update(p)
 
     def __str__(self):
         return self.name
@@ -37,13 +43,13 @@ class BNode:
     def __repr__(self):
         return f'<{self.name}|low: {self.low}, high: {self.high}, penalty: {self.penalty}, cost: {self.cost}, obj: {self.obj}>'
 
-    def strat2string(self):
+    def strat2str(self):
         hstring = ' '
         lstring = ''
         if self.high:
-            hstring = self.high.strat2string()
+            hstring = self.high.strat2str()
         if self.low:
-            lstring = self.low.strat2string()
+            lstring = self.low.strat2str()
         return f'{self}{hstring}{lstring}'
 
 
@@ -74,6 +80,33 @@ def load_map(mapname=None):
     return G
 
 
+def optimalstrat(G):
+    n = len(G)
+    # Base cases
+    if n == 0:
+        return None
+    if n == 1:
+        return BNode(G, list(G.nodes)[0])
+
+    # Choose vertex V w/ lowest penalty and degree closest to n/2
+    minpenalty = min([G.nodes[g]['penalty'] for g in G])
+    Vcand = [g for g in G if G.nodes[g]['penalty'] == minpenalty]
+    V = min(Vcand, key=lambda g: abs(G.degree[g] - n // 2))
+
+    # Build subtrees
+    A = G.subgraph(G.adj[V])  # subgraph of vertices adjacent to V
+    nonadj = set(G).difference(A)
+    nonadj.remove(V)
+    B = G.subgraph(nonadj)  # subgraph of vertices non-adjacent to V (excluding V)
+    high = optimalstrat(A)
+    low = optimalstrat(B)
+
+    # Construct optimal tree
+    root = BNode(G, V)
+    root.addchildren(low=low, high=high)
+    return root
+
+
 if __name__ == '__main__':
     map = 'sg'
     G = load_map(map)
@@ -94,8 +127,7 @@ if __name__ == '__main__':
     nodes['i'].addchildren(None, nodes['b'])
     nodes['h'].addchildren(nodes['i'], nodes['g'])
     nodes['f'].addchildren(nodes['h'], nodes['e'])
-    print(recstrat.strat2string())
+    print(recstrat.strat2str())
 
-
-
-
+    optstrat = optimalstrat(G)
+    print(optstrat.strat2str())
