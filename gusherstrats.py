@@ -1,6 +1,7 @@
 import networkx as nx
 import matplotlib.pyplot as plt
 from ast import literal_eval as l_eval
+from collections import deque
 
 # Special characters for parsing gusher graph files
 COMMENTCHAR = '$'
@@ -17,7 +18,7 @@ class BNode:
         self.obj = 0  # objective function evaluated on subtree with this node as root
         # TODO - need to fix objective score to properly implement dynamic programming?
 
-    def addchildren(self, low=None, high=None, *n):
+    def addchildren(self, low, high, n=0):
         objL = 0
         objH = 0
         if low:
@@ -42,19 +43,40 @@ class BNode:
         return self.name
 
     def __repr__(self):
-        return f'<{self.name}|low: {self.low}, high: {self.high}, penalty: {self.penalty}, cost: {self.cost}, obj: {self.obj}>'
+        return f'{{{self.name} > {self.high} ({self.low}), p: {self.penalty}, c: {self.cost}, o: {self.obj}}}'
 
-    def strat2str(self):
-        hstring = ' '
-        lstring = ''
-        if self.high:
-            hstring = self.high.strat2str()
-        if self.low:
-            lstring = self.low.strat2str()
-        return f'{self}{hstring}{lstring}'
+    def writestrat(self):  # TODO - replace with a better pretty-printer
+        s = ""
+        high = self
+        lows = deque([deque()])
+        while high or (lows and lows[0]):
+            # first traverse as many "high" gushers as possible
+            high_exhausted = not high
+            if high_exhausted:  # after exhausting high gushers, traverse entire "low" subtree
+                high = lows[0].popleft()
+
+            current = high
+            s += str(current)
+            high = current.high
+
+            if current.low:
+                if high_exhausted:
+                    lows.appendleft(deque([current.low]))
+                else:
+                    lows[0].append(current.low)
+
+            if not high:
+                if lows and lows[0]:
+                    s += '('
+                else:
+                    s += ')'
+                    lows.popleft()
+                    if lows:
+                        s += ','
+        return s + ')'
 
 
-def load_map(mapname=None):
+def load_map(mapname):  # TODO - separate gusher map and penalty assignment(s) into 2 files
     """Create graph from the gusher layout and penalty values specified in external file."""
     path = f'goldie seeking/gusher graphs/{mapname}.txt'
     G = nx.read_adjlist(path, comments=COMMENTCHAR)
@@ -107,7 +129,7 @@ def optimalstrat(G):
 
     # Construct optimal tree
     root = BNode(G, V)
-    root.addchildren(low=low, high=high)
+    root.addchildren(low, high, n)
     return root
 
 
@@ -125,13 +147,13 @@ if __name__ == '__main__':
 
     nodes = {name: BNode(G, name) for name in G.nodes}
     recstrat = nodes['f']
-    nodes['d'].addchildren(None, nodes['c'])
-    nodes['e'].addchildren(None, nodes['d'])
-    nodes['g'].addchildren(None, nodes['a'])
-    nodes['i'].addchildren(None, nodes['b'])
-    nodes['h'].addchildren(nodes['i'], nodes['g'])
-    nodes['f'].addchildren(nodes['h'], nodes['e'])
-    print(f'recommended strat: {recstrat.strat2str()}')
+    nodes['d'].addchildren(None, nodes['c'], 2)
+    nodes['e'].addchildren(None, nodes['d'], 3)
+    nodes['g'].addchildren(None, nodes['a'], 2)
+    nodes['i'].addchildren(None, nodes['b'], 2)
+    nodes['h'].addchildren(nodes['i'], nodes['g'], 5)
+    nodes['f'].addchildren(nodes['h'], nodes['e'], 9)
+    print(f'recommended strat: {recstrat.writestrat()}')
 
     optstrat = optimalstrat(G)
-    print(f'algorithm\'s strat: {optstrat.strat2str()}')
+    print(f'algorithm\'s strat: {optstrat.writestrat()}')
