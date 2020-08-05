@@ -1,8 +1,7 @@
 import networkx as nx
 import matplotlib.pyplot as plt
-import re
+from pyparsing import *
 from ast import literal_eval as l_eval
-from collections import deque
 from random import shuffle
 
 # Special characters for parsing files
@@ -63,16 +62,15 @@ class BNode:
     def __repr__(self):
         return f'{{{self.name} > ({self.high}, {self.low}), p: {self.penalty}, c: {self.cost}, o: {self.obj}}}'
 
-
     def writetree(self):
         """Write the strategy encoded by the subtree rooted at this node in modified Newick format.
         V(H, L) represents the tree with root node V, high subtree H, and low subtree L."""
         if self.high and self.low:
             return f'{self}({self.high.writetree()}, {self.low.writetree()})'
         elif self.high:
-            return f'{self}({self.high.writetree()})'
+            return f'{self}({self.high.writetree()},)'
         elif self.low:
-            return f'{self}({self.low.writetree()})'
+            return f'{self}(,{self.low.writetree()})'
         else:
             return f'{self}'
 
@@ -81,20 +79,16 @@ class BNode:
         """Read the strategy encoded in tree_str and build the corresponding decision tree.
         V(H, L) represents the tree with root node V, high subtree H, and low subtree L."""
         # TODO - write parser that constructs trees from Newick format strings
-        stack = deque()
-        prev = None
-        current = None
-        tree_str = tree_str.replace(' ', '')
-        for token in re.split(r'', tree_str):
-            if token is '(':
-                pass
-            elif token is ',':
-                pass
-            elif token is ')':
-                pass
-            else:
-                current = BNode(G, token)
+        node = Word(alphanums)
+        LPAREN, COMMA, RPAREN = map(Suppress, '(,)')
+        tree = Forward()
+        high = tree.setResultsName('high')
+        low = tree.setResultsName('low')
+        subtrees = Group(LPAREN + Optional(high) + COMMA + Optional(low) + RPAREN)
+        tree << node.setResultsName('root') + Optional(subtrees.setResultsName('subtrees'))
+        tokens = tree.parseString(tree_str)
 
+        return tokens
 
 
 def load_map(mapname):  # TODO - separate gusher map and penalty assignment(s) into 2 files
@@ -155,8 +149,8 @@ def getstratfast(G):
 
 
 if __name__ == '__main__':
-    map = 'sg'
-    G = load_map(map)
+    map_id = 'sg'
+    G = load_map(map_id)
 
     if False:
         plt.plot()
@@ -190,3 +184,6 @@ if __name__ == '__main__':
 
     optstrat = getstratfast(G)
     print(f'algorithm\'s strat: {optstrat.writetree()}')
+
+    tokens = BNode.readtree(optstrat.writetree(), G)
+    print(tokens)
