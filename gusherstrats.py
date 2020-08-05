@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import re
 from ast import literal_eval as l_eval
 from collections import deque
+from random import shuffle
 
 # Special characters for parsing files
 COMMENTCHAR = '$'
@@ -125,7 +126,7 @@ def load_map(mapname):  # TODO - separate gusher map and penalty assignment(s) i
 
 # TODO - write more thorough version of optimalstrat that checks all possible trees and uses dynamic programming
 
-def optimalstrat(G):
+def getstratfast(G):
     """Build an optimal decision tree for the gusher graph G."""
     n = len(G)
     # Base cases
@@ -144,8 +145,8 @@ def optimalstrat(G):
     nonadj = set(G).difference(A)
     nonadj.remove(V)
     B = G.subgraph(nonadj)  # subgraph of vertices non-adjacent to V (excluding V)
-    high = optimalstrat(A)
-    low = optimalstrat(B)
+    high = getstratfast(A)
+    low = getstratfast(B)
 
     # Construct optimal tree
     root = BNode(G, V)
@@ -167,21 +168,20 @@ if __name__ == '__main__':
         plt.show()
 
     nodes = {name: BNode(G, name) for name in G.nodes}
+    # build recommended strat tree in random order; objective function should be the same every time
+    add_commands = ["nodes['d'].addchildren(None, nodes['c'])",
+                    "nodes['d'].addchildren(None, nodes['c'])",
+                    "nodes['e'].addchildren(None, nodes['d'])",
+                    "nodes['g'].addchildren(None, nodes['a'])",
+                    "nodes['i'].addchildren(None, nodes['b'])",
+                    "nodes['h'].addchildren(nodes['i'], nodes['g'])",
+                    "nodes['f'].addchildren(nodes['h'], nodes['e'])"]
+    shuffle(add_commands)
+    for command in add_commands:
+        eval(command)
     recstrat = nodes['f']
-    # nodes['d'].addchildren(None, nodes['c'], 2)
-    # nodes['e'].addchildren(None, nodes['d'], 3)
-    # nodes['g'].addchildren(None, nodes['a'], 2)
-    # nodes['i'].addchildren(None, nodes['b'], 2)
-    # nodes['h'].addchildren(nodes['i'], nodes['g'], 5)
-    # nodes['f'].addchildren(nodes['h'], nodes['e'], 9)
-    nodes['f'].addchildren(nodes['h'], nodes['e'])
-    nodes['h'].addchildren(nodes['i'], nodes['g'])
-    nodes['g'].addchildren(None, nodes['a'])
-    nodes['e'].addchildren(None, nodes['d'])
-    nodes['i'].addchildren(None, nodes['b'])
-    nodes['d'].addchildren(None, nodes['c'])
     recstrat.calc_tree_obj()
     print(f'recommended strat: {recstrat.writetree()}')
 
-    optstrat = optimalstrat(G)
+    optstrat = getstratfast(G)
     print(f'algorithm\'s strat: {optstrat.writetree()}')
