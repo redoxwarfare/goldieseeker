@@ -169,16 +169,21 @@ if __name__ == '__main__':
 
     nodes = {name: BNode(G, name) for name in G.nodes}
     # build recommended strat tree in random order; objective function should be the same every time
-    add_commands = ["nodes['d'].addchildren(None, nodes['c'])",
-                    "nodes['d'].addchildren(None, nodes['c'])",
-                    "nodes['e'].addchildren(None, nodes['d'])",
-                    "nodes['g'].addchildren(None, nodes['a'])",
-                    "nodes['i'].addchildren(None, nodes['b'])",
-                    "nodes['h'].addchildren(nodes['i'], nodes['g'])",
-                    "nodes['f'].addchildren(nodes['h'], nodes['e'])"]
-    shuffle(add_commands)
-    for command in add_commands:
-        eval(command)
+    args_list = [('d', None, 'c'),
+                 ('e', None, 'd'),
+                 ('g', None, 'a'),
+                 ('i', None, 'b'),
+                 ('h', 'i', 'g'),
+                 ('f', 'h', 'e')]
+    shuffle(args_list)
+    for args in args_list:
+        low = None
+        high = None
+        if args[1]:
+            low = nodes[args[1]]
+        if args[2]:
+            high = nodes[args[2]]
+        nodes[args[0]].addchildren(low, high)
     recstrat = nodes['f']
     recstrat.calc_tree_obj()
     print(f'recommended strat: {recstrat.writetree()}')
