@@ -1,5 +1,4 @@
 import networkx as nx
-# noinspection PyUnresolvedReferences
 import matplotlib.pyplot as plt
 from pyparsing import *
 from ast import literal_eval as l_eval
@@ -153,7 +152,6 @@ if __name__ == '__main__':
     map_id = 'sg'
     G = load_map(map_id)
 
-    # noinspection PyUnreachableCode
     if False:
         plt.plot()
         plt.title(G.graph['name'])
