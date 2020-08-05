@@ -1,9 +1,10 @@
 import networkx as nx
 import matplotlib.pyplot as plt
+import re
 from ast import literal_eval as l_eval
 from collections import deque
 
-# Special characters for parsing gusher graph files
+# Special characters for parsing files
 COMMENTCHAR = '$'
 DEFAULTCHAR = '.'
 
@@ -13,75 +14,86 @@ class BNode:
         self.name = name
         self.low = None  # next gusher to open if this gusher is low
         self.high = None  # next gusher to open if this gusher is high
+        self.parent = None # gusher previously opened in sequence
         self.penalty = G.nodes[name]['penalty']  # penalty for opening this gusher
         self.cost = 0  # if Goldie is in this gusher, total penalty incurred by following decision tree
         self.obj = 0  # objective function evaluated on subtree with this node as root
-        # TODO - need to fix objective score to properly implement dynamic programming?
 
     def addchildren(self, low, high, n=0):
         objL = 0
         objH = 0
         if low:
             self.low = low
-            self.low.update(self.penalty)
+            low.parent = self
             objL = self.low.obj
         if high:
             self.high = high
-            self.high.update(self.penalty)
+            high.parent = self
             objH = self.high.obj
         if n:
             self.obj = self.penalty * (n - 1) + objL + objH
+        self.updatecost()
 
-    def update(self, p):  # only works if tree is built from bottom up
-        self.cost += p
+    def updatecost(self):
+        """Recursively update costs of node and its children."""
+        if self.parent:
+            self.cost = self.parent.penalty + self.parent.cost
         if self.low:
-            self.low.update(p)
+            self.low.updatecost()
         if self.high:
-            self.high.update(p)
+            self.high.updatecost()
+
+    def calc_tree_obj(self):
+        """Calculate and store the objective score of the tree rooted at this node."""
+        def recurse_sum(node):
+            hsum = 0
+            lsum = 0
+            if node.high:
+                hsum = recurse_sum(node.high)
+            if node.low:
+                lsum = recurse_sum(node.low)
+            return node.cost + hsum + lsum
+        self.updatecost()
+        self.obj = recurse_sum(self)
 
     def __str__(self):
         return self.name
 
     def __repr__(self):
-        return f'{{{self.name} > {self.high} ({self.low}), p: {self.penalty}, c: {self.cost}, o: {self.obj}}}'
+        return f'{{{self.name} > ({self.high}, {self.low}), p: {self.penalty}, c: {self.cost}, o: {self.obj}}}'
+
 
     def writetree(self):
-        # TODO - BFS-based pretty printer
-        pass
+        """Write the strategy encoded by the subtree rooted at this node in modified Newick format.
+        V(H, L) represents the tree with root node V, high subtree H, and low subtree L."""
+        if self.high and self.low:
+            return f'{self}({self.high.writetree()}, {self.low.writetree()})'
+        elif self.high:
+            return f'{self}({self.high.writetree()})'
+        elif self.low:
+            return f'{self}({self.low.writetree()})'
+        else:
+            return f'{self}'
 
-    def writestrat(self):
-        """Write the strategy encoded by the subtree rooted at this node in a compact, human-readable format.\n
-        The output string consists of a 'high group' followed by a list of comma-separated 'low groups', bracketed by
-        parentheses. Open gushers in the high group left-to-right. If the kth gusher in the group is low, jump to the
-        kth low group in the list."""
-        s = ""
-        high = self
-        lows = deque([deque()])
-        while high or (lows and lows[0]):
-            # first traverse as many "high" gushers as possible
-            high_exhausted = not high
-            if high_exhausted:  # after exhausting high gushers, traverse entire "low" subtree
-                high = lows[0].popleft()
+    @staticmethod
+    def readtree(tree_str, G):
+        """Read the strategy encoded in tree_str and build the corresponding decision tree.
+        V(H, L) represents the tree with root node V, high subtree H, and low subtree L."""
+        # TODO - write parser that constructs trees from Newick format strings
+        stack = deque()
+        prev = None
+        current = None
+        tree_str = tree_str.replace(' ', '')
+        for token in re.split(r'', tree_str):
+            if token is '(':
+                pass
+            elif token is ',':
+                pass
+            elif token is ')':
+                pass
+            else:
+                current = BNode(G, token)
 
-            current = high
-            s += str(current)
-            high = current.high
-
-            if current.low:
-                if high_exhausted:
-                    lows.appendleft(deque([current.low]))
-                else:
-                    lows[0].append(current.low)
-
-            if not high:
-                if lows and lows[0]:
-                    s += '('
-                else:
-                    s += ')'
-                    lows.popleft()
-                    if lows:
-                        s += ','
-        return s + ')'
 
 
 def load_map(mapname):  # TODO - separate gusher map and penalty assignment(s) into 2 files
@@ -145,23 +157,31 @@ if __name__ == '__main__':
     map = 'sg'
     G = load_map(map)
 
-    plt.plot()
-    plt.title(G.graph['name'])
-    pos = nx.kamada_kawai_layout(G)
-    pos_attrs = {node: (coord[0] - 0.08, coord[1] + 0.1) for (node, coord) in pos.items()}
-    nx.draw_networkx(G, pos, edge_color='#888888', font_color='#ffffff')
-    nx.draw_networkx_labels(G, pos_attrs, labels=nx.get_node_attributes(G, 'penalty'))
-    plt.show()
+    if False:
+        plt.plot()
+        plt.title(G.graph['name'])
+        pos = nx.kamada_kawai_layout(G)
+        pos_attrs = {node: (coord[0] - 0.08, coord[1] + 0.1) for (node, coord) in pos.items()}
+        nx.draw_networkx(G, pos, edge_color='#888888', font_color='#ffffff')
+        nx.draw_networkx_labels(G, pos_attrs, labels=nx.get_node_attributes(G, 'penalty'))
+        plt.show()
 
     nodes = {name: BNode(G, name) for name in G.nodes}
     recstrat = nodes['f']
-    nodes['d'].addchildren(None, nodes['c'], 2)
-    nodes['e'].addchildren(None, nodes['d'], 3)
-    nodes['g'].addchildren(None, nodes['a'], 2)
-    nodes['i'].addchildren(None, nodes['b'], 2)
-    nodes['h'].addchildren(nodes['i'], nodes['g'], 5)
-    nodes['f'].addchildren(nodes['h'], nodes['e'], 9)
-    print(f'recommended strat: {recstrat.writestrat()}')
+    # nodes['d'].addchildren(None, nodes['c'], 2)
+    # nodes['e'].addchildren(None, nodes['d'], 3)
+    # nodes['g'].addchildren(None, nodes['a'], 2)
+    # nodes['i'].addchildren(None, nodes['b'], 2)
+    # nodes['h'].addchildren(nodes['i'], nodes['g'], 5)
+    # nodes['f'].addchildren(nodes['h'], nodes['e'], 9)
+    nodes['f'].addchildren(nodes['h'], nodes['e'])
+    nodes['h'].addchildren(nodes['i'], nodes['g'])
+    nodes['g'].addchildren(None, nodes['a'])
+    nodes['e'].addchildren(None, nodes['d'])
+    nodes['i'].addchildren(None, nodes['b'])
+    nodes['d'].addchildren(None, nodes['c'])
+    recstrat.calc_tree_obj()
+    print(f'recommended strat: {recstrat.writetree()}')
 
     optstrat = optimalstrat(G)
-    print(f'algorithm\'s strat: {optstrat.writestrat()}')
+    print(f'algorithm\'s strat: {optstrat.writetree()}')
