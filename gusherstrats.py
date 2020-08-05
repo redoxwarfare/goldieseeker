@@ -1,9 +1,8 @@
 import networkx as nx
 # noinspection PyUnresolvedReferences
 import matplotlib.pyplot as plt
-from pyparsing import *
+from pyparsing import alphanums, Word, Forward, Suppress, Optional, Group
 from ast import literal_eval as l_eval
-from random import shuffle
 
 # Special characters for parsing files
 COMMENTCHAR = '$'
@@ -20,7 +19,13 @@ class BNode:
         self.cost = 0  # if Goldie is in this gusher, total penalty incurred by following decision tree
         self.obj = 0  # objective function evaluated on subtree with this node as root
 
-    def addchildren(self, low, high, n=0):
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return f'{{{self.name} > ({self.high}, {self.low}), p: {self.penalty}, c: {self.cost}, o: {self.obj}}}'
+
+    def addchildren(self, high, low, n=0):
         objL = 0
         objH = 0
         if low:
@@ -57,12 +62,6 @@ class BNode:
         self.updatecost()
         self.obj = recurse_sum(self)
 
-    def __str__(self):
-        return self.name
-
-    def __repr__(self):
-        return f'{{{self.name} > ({self.high}, {self.low}), p: {self.penalty}, c: {self.cost}, o: {self.obj}}}'
-
     def writetree(self):
         """Write the strategy encoded by the subtree rooted at this node in modified Newick format.
         V(H, L) represents the tree with root node V, high subtree H, and low subtree L."""
@@ -80,16 +79,30 @@ class BNode:
         """Read the strategy encoded in tree_str and build the corresponding decision tree.
         V(H, L) represents the tree with root node V, high subtree H, and low subtree L."""
         # TODO - write parser that constructs trees from Newick format strings
+
+        def buildtree(tokens):  # recursively build tree from ParseResults object
+            root = BNode(G, tokens.root)
+            if tokens.high or tokens.low:
+                high = None
+                low = None
+                if tokens.high:
+                    high = buildtree(tokens.high)
+                if tokens.low:
+                    low = buildtree(tokens.low)
+                root.addchildren(high=high, low=low)
+            return root
+
         node = Word(alphanums)
         LPAREN, COMMA, RPAREN = map(Suppress, '(,)')
         tree = Forward()
-        high = tree.setResultsName('high')
-        low = tree.setResultsName('low')
-        subtrees = Group(LPAREN + Optional(high) + COMMA + Optional(low) + RPAREN)
-        tree << node.setResultsName('root') + Optional(subtrees.setResultsName('subtrees'))
-        tokens = tree.parseString(tree_str)
+        subtrees = LPAREN + Group(Optional(tree)).setResultsName('high') + COMMA + \
+                   Group(Optional(tree)).setResultsName('low') + RPAREN
+        tree << node.setResultsName('root') + Optional(subtrees)
 
-        return tokens
+        tokens = tree.parseString(tree_str)
+        root = buildtree(tokens)
+        root.calc_tree_obj()
+        return root
 
 
 def load_map(mapname):  # TODO - separate gusher map and penalty assignment(s) into 2 files
@@ -145,7 +158,7 @@ def getstratfast(G):
 
     # Construct optimal tree
     root = BNode(G, V)
-    root.addchildren(low, high, n)
+    root.addchildren(high, low, n)
     return root
 
 
@@ -163,29 +176,8 @@ if __name__ == '__main__':
         nx.draw_networkx_labels(G, pos_attrs, labels=nx.get_node_attributes(G, 'penalty'))
         plt.show()
 
-    nodes = {name: BNode(G, name) for name in G.nodes}
-    # build recommended strat tree in random order; objective function should be the same every time
-    args_list = [('d', None, 'c'),
-                 ('e', None, 'd'),
-                 ('g', None, 'a'),
-                 ('i', None, 'b'),
-                 ('h', 'i', 'g'),
-                 ('f', 'h', 'e')]
-    shuffle(args_list)
-    for args in args_list:
-        low = None
-        high = None
-        if args[1]:
-            low = nodes[args[1]]
-        if args[2]:
-            high = nodes[args[2]]
-        nodes[args[0]].addchildren(low, high)
-    recstrat = nodes['f']
-    recstrat.calc_tree_obj()
+    recstrat = BNode.readtree('f(e(d(c,),), h(g(a,), i(b,)))', G)
     print(f'recommended strat: {recstrat.writetree()}')
 
     optstrat = getstratfast(G)
     print(f'algorithm\'s strat: {optstrat.writetree()}')
-
-    tokens = BNode.readtree(optstrat.writetree(), G)
-    print(tokens)
