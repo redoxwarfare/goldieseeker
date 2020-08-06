@@ -80,13 +80,18 @@ def getstratfast(G):
     return root
 
 
+recstrats = {'sg': 'f(e(d(c,),), h(g(a,), i(b,)))',
+             'ap': 'f(g(e, c(d,)), g(a, b))'}
+
 if __name__ == '__main__':
-    map_id = 'sg'
+    map_id = 'ap'
     G = load_graph(map_id)
     plot_graph(G)
 
-    recstrat = readtree('f(e(d(c,),), h(g(a,), i(b,)))', G)
+    recstrat = readtree(recstrats[map_id], G)
     print(f'recommended strat: {writetree(recstrat)}')
 
     optstrat = getstratfast(G)
     print(f'algorithm\'s strat: {writetree(optstrat)}')
+
+    gskip = readtree('f(g(e, c(d,)), b(a,))', G)

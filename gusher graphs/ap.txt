@@ -1,0 +1,9 @@
+$ Ruins of Ark Polaris
+$ {'a': 7, 'e': 6, 'db': 4, 'c': 3, '.': 2}
+a b c d e g
+b c d e
+c d e f
+d e f
+e f g
+f g
+g
