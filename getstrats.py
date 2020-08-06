@@ -87,7 +87,7 @@ recstrats = {'sg': 'f(e(d(c,),), h(g(a,), i(b,)))',
              'lo': 'g(h(i,), d(f(e,), a(c(b,),)))'}
 
 if __name__ == '__main__':
-    map_id = 'lo'
+    map_id = 'mb'
     G = load_graph(map_id)
     plot_graph(G)
 

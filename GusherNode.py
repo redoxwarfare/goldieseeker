@@ -20,6 +20,13 @@ class GusherNode:
     def __repr__(self):
         return f'{{{self.name} > ({self.high}, {self.low}), p: {self.penalty}, c: {self.cost}, o: {self.obj}}}'
 
+    def __iter__(self):
+        yield self
+        if self.high:
+            yield from self.high.__iter__()
+        if self.low:
+            yield from self.low.__iter__()
+
     def addchildren(self, high, low, n=0):
         objL = 0
         objH = 0
