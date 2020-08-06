@@ -81,9 +81,9 @@ def getstratfast(G):
 
 
 recstrats = {'sg': 'f(e(d(c,),), h(g(a,), i(b,)))',
-             'ap': 'f(g(e, c(d,)), g(a, b))',
+             'ap': 'f(g(e, c(d,)), g*(a, b))',
              'ss': 'f(d(b, g), e(c, a))',
-             'mb': 'b(c(d(a,), e), c(f, h(g,)))',
+             'mb': 'b(c(d(a,), e), c*(f, h(g,)))',
              'lo': 'g(h(i,), d(f(e,), a(c(b,),)))'}
 desc = ('recommended', "algorithm's")
 
@@ -97,6 +97,6 @@ if __name__ == '__main__':
     optstrat.calc_tree_obj()
     strats = (recstrat, optstrat)
     for i in range(len(strats)):
-        print(f'{desc[i]} strat: {writetree(strats[i])}\n'
+        print(f'\n{desc[i]} strat: {writetree(strats[i])}\n'
               f'    objective score: {strats[i].obj}\n'
-              '    costs: {' + ', '.join([f'{g}: {g.cost}' for g in strats[i]]) + '}\n')
+              '    costs: {' + ', '.join(f'{g}: {g.cost}' for g in strats[i] if g.findable) + '}')
