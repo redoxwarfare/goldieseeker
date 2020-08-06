@@ -55,25 +55,25 @@ class GusherNode:
         self.obj = recurse_sum(self)
 
 
-def writetree(tree):
-    """Write the strategy encoded by the subtree rooted at this node in modified Newick format.
+def writetree(root):
+    """Write the strategy encoded by the subtree rooted at 'root' in modified Newick format.
     V(H, L) represents the tree with root node V, high subtree H, and low subtree L."""
-    if tree.high and tree.low:
-        return f'{tree}({writetree(tree.high)}, {writetree(tree.low)})'
-    elif tree.high:
-        return f'{tree}({writetree(tree.high)},)'
-    elif tree.low:
-        return f'{tree}(,{writetree(tree.low)})'
+    if root.high and root.low:
+        return f'{root}({writetree(root.high)}, {writetree(root.low)})'
+    elif root.high:
+        return f'{root}({writetree(root.high)},)'
+    elif root.low:
+        return f'{root}(,{writetree(root.low)})'
     else:
-        return f'{tree}'
+        return f'{root}'
 
 
 # Decision tree grammar
 node = Word(alphanums)
-LPAREN, _COMMA, _RPAREN = map(Suppress, '(,)')
+LPAREN, COMMA, RPAREN = map(Suppress, '(,)')
 tree = Forward()
-subtrees = LPAREN + Group(Optional(tree)).setResultsName('high') + _COMMA + \
-           Group(Optional(tree)).setResultsName('low') + _RPAREN
+subtree = Group(Optional(tree))
+subtrees = LPAREN + subtree.setResultsName('high') + COMMA + subtree.setResultsName('low') + RPAREN
 tree << node.setResultsName('root') + Optional(subtrees)
 
 
