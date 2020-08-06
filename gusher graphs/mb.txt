@@ -1,0 +1,10 @@
+$ Marooner's Bay
+$ {'a': 7, 'd': 6, 'f': 4, 'egh': 3, '.': 2}
+a b c
+b c d e
+c d f
+d e f h
+e f g h
+f g h
+g h
+h

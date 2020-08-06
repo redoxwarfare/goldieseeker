@@ -64,7 +64,7 @@ def getstratfast(G):
     # Choose vertex V w/ lowest penalty and degree closest to n/2
     minpenalty = min([G.nodes[g]['penalty'] for g in G])
     Vcand = [g for g in G if G.nodes[g]['penalty'] == minpenalty]
-    V = min(Vcand, key=lambda g: abs(G.degree[g] - n // 2))
+    V = min(Vcand, key=lambda g: abs(G.degree[g] - n / 2))
 
     # Build subtrees
     A = G.subgraph(G.adj[V])  # subgraph of vertices adjacent to V
@@ -81,10 +81,13 @@ def getstratfast(G):
 
 
 recstrats = {'sg': 'f(e(d(c,),), h(g(a,), i(b,)))',
-             'ap': 'f(g(e, c(d,)), g(a, b))'}
+             'ap': 'f(g(e, c(d,)), g(a, b))',
+             'ss': 'f(d(b, g), e(c, a))',
+             'mb': 'b(c(d(a,), e), c(f, h(g,)))',
+             'lo': 'g(h(i,), d(f(e,), a(c(b,),)))'}
 
 if __name__ == '__main__':
-    map_id = 'ap'
+    map_id = 'lo'
     G = load_graph(map_id)
     plot_graph(G)
 
@@ -93,5 +96,3 @@ if __name__ == '__main__':
 
     optstrat = getstratfast(G)
     print(f'algorithm\'s strat: {writetree(optstrat)}')
-
-    gskip = readtree('f(g(e, c(d,)), b(a,))', G)

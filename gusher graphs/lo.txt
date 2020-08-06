@@ -1,0 +1,11 @@
+$ Lost Outpost
+$ {'bei': 4, 'cfh': 3, '.': 2}
+a b c
+b c e
+c e
+d e f
+e f h i
+f h
+g h i
+h i
+i

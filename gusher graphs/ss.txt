@@ -1,0 +1,9 @@
+$ Salmonid Smokeyard
+$ {'ab': 6, 'c': 5, 'ed': 3, '.': 2}
+a b c d
+b c d f
+c e g
+d f
+e g
+f g
+g
