@@ -2,12 +2,15 @@ from pyparsing import alphanums, Word, Forward, Suppress, Optional, Group
 
 
 class GusherNode:
-    def __init__(self, G, name):  # G is a networkx graph
+    def __init__(self, name, graph=None, penalty=1):  # graph is a networkx graph
         self.name = name
         self.low = None  # next gusher to open if this gusher is low
         self.high = None  # next gusher to open if this gusher is high
         self.parent = None  # gusher previously opened in sequence
-        self.penalty = G.nodes[name]['penalty']  # penalty for opening this gusher
+        if graph:
+            self.penalty = graph.nodes[name]['penalty']  # penalty for opening this gusher
+        else:
+            self.penalty = penalty
         self.cost = 0  # if Goldie is in this gusher, total penalty incurred by following decision tree
         self.obj = 0  # objective function evaluated on subtree with this node as root
 
@@ -77,11 +80,11 @@ subtrees = LPAREN + subtree.setResultsName('high') + COMMA + subtree.setResultsN
 tree << node.setResultsName('root') + Optional(subtrees)
 
 
-def readtree(tree_str, G):
+def readtree(tree_str, graph):
     """Read the strategy encoded in tree_str and build the corresponding decision tree.
     V(H, L) represents the tree with root node V, high subtree H, and low subtree L."""
     def buildtree(tokens):  # recursively convert ParseResults object into GusherNode tree
-        root = GusherNode(G, tokens.root)
+        root = GusherNode(tokens.root, graph=graph)
         if tokens.high or tokens.low:
             high = None
             low = None

@@ -9,7 +9,7 @@ COMMENTCHAR = '$'
 DEFAULTCHAR = '.'
 
 
-def load_map(mapname):  # TODO - separate gusher map and penalty assignment(s) into 2 files
+def load_graph(mapname):  # TODO - separate gusher map and penalty assignment(s) into 2 files
     """Create graph from the gusher layout and penalty values specified in external file."""
     path = f'gusher graphs/{mapname}.txt'
     G = nx.read_adjlist(path, comments=COMMENTCHAR)
@@ -36,7 +36,21 @@ def load_map(mapname):  # TODO - separate gusher map and penalty assignment(s) i
     return G
 
 
-# TODO - write more thorough version of optimalstrat that checks all possible trees and uses dynamic programming
+def plot_graph(graph):
+    plt.plot()
+    plt.title(graph.graph['name'])
+    pos = nx.kamada_kawai_layout(graph)
+    pos_attrs = {node: (coord[0] - 0.08, coord[1] + 0.1) for (node, coord) in pos.items()}
+    nx.draw_networkx(graph, pos, edge_color='#888888', font_color='#ffffff')
+    nx.draw_networkx_labels(graph, pos_attrs, labels=nx.get_node_attributes(graph, 'penalty'))
+    plt.show()
+
+
+# TODO - write more thorough version of getstrat that checks all possible trees and uses dynamic programming
+def getstrat(G):
+    root = None
+    return root
+
 
 def getstratfast(G):
     """Build an optimal decision tree for the gusher graph G."""
@@ -45,7 +59,7 @@ def getstratfast(G):
     if n == 0:
         return None
     if n == 1:
-        return GusherNode(G, list(G.nodes)[0])
+        return GusherNode(list(G.nodes)[0], graph=G)
 
     # Choose vertex V w/ lowest penalty and degree closest to n/2
     minpenalty = min([G.nodes[g]['penalty'] for g in G])
@@ -61,24 +75,15 @@ def getstratfast(G):
     low = getstratfast(B)
 
     # Construct optimal tree
-    root = GusherNode(G, V)
+    root = GusherNode(V, graph=G)
     root.addchildren(high, low, n)
     return root
 
 
 if __name__ == '__main__':
     map_id = 'sg'
-    G = load_map(map_id)
-
-    # noinspection PyUnreachableCode
-    if False:
-        plt.plot()
-        plt.title(G.graph['name'])
-        pos = nx.kamada_kawai_layout(G)
-        pos_attrs = {node: (coord[0] - 0.08, coord[1] + 0.1) for (node, coord) in pos.items()}
-        nx.draw_networkx(G, pos, edge_color='#888888', font_color='#ffffff')
-        nx.draw_networkx_labels(G, pos_attrs, labels=nx.get_node_attributes(G, 'penalty'))
-        plt.show()
+    G = load_graph(map_id)
+    plot_graph(G)
 
     recstrat = readtree('f(e(d(c,),), h(g(a,), i(b,)))', G)
     print(f'recommended strat: {writetree(recstrat)}')
