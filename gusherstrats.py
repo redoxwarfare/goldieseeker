@@ -1,113 +1,16 @@
 import networkx as nx
 # noinspection PyUnresolvedReferences
 import matplotlib.pyplot as plt
-from pyparsing import alphanums, Word, Forward, Suppress, Optional, Group
 from ast import literal_eval as l_eval
+from GusherNode import GusherNode, writetree, readtree
 
 # Special characters for parsing files
 COMMENTCHAR = '$'
 DEFAULTCHAR = '.'
 
-
-class BNode:
-    def __init__(self, G, name):
-        self.name = name
-        self.low = None  # next gusher to open if this gusher is low
-        self.high = None  # next gusher to open if this gusher is high
-        self.parent = None # gusher previously opened in sequence
-        self.penalty = G.nodes[name]['penalty']  # penalty for opening this gusher
-        self.cost = 0  # if Goldie is in this gusher, total penalty incurred by following decision tree
-        self.obj = 0  # objective function evaluated on subtree with this node as root
-
-    def __str__(self):
-        return self.name
-
-    def __repr__(self):
-        return f'{{{self.name} > ({self.high}, {self.low}), p: {self.penalty}, c: {self.cost}, o: {self.obj}}}'
-
-    def addchildren(self, high, low, n=0):
-        objL = 0
-        objH = 0
-        if low:
-            self.low = low
-            low.parent = self
-            objL = self.low.obj
-        if high:
-            self.high = high
-            high.parent = self
-            objH = self.high.obj
-        if n:
-            self.obj = self.penalty * (n - 1) + objL + objH
-        self.updatecost()
-
-    def updatecost(self):
-        """Recursively update costs of node and its children."""
-        if self.parent:
-            self.cost = self.parent.penalty + self.parent.cost
-        if self.low:
-            self.low.updatecost()
-        if self.high:
-            self.high.updatecost()
-
-    def calc_tree_obj(self):
-        """Calculate and store the objective score of the tree rooted at this node."""
-        def recurse_sum(node):
-            hsum = 0
-            lsum = 0
-            if node.high:
-                hsum = recurse_sum(node.high)
-            if node.low:
-                lsum = recurse_sum(node.low)
-            return node.cost + hsum + lsum
-        self.updatecost()
-        self.obj = recurse_sum(self)
-
-    def writetree(self):
-        """Write the strategy encoded by the subtree rooted at this node in modified Newick format.
-        V(H, L) represents the tree with root node V, high subtree H, and low subtree L."""
-        if self.high and self.low:
-            return f'{self}({self.high.writetree()}, {self.low.writetree()})'
-        elif self.high:
-            return f'{self}({self.high.writetree()},)'
-        elif self.low:
-            return f'{self}(,{self.low.writetree()})'
-        else:
-            return f'{self}'
-
-    @staticmethod
-    def readtree(tree_str, G):
-        """Read the strategy encoded in tree_str and build the corresponding decision tree.
-        V(H, L) represents the tree with root node V, high subtree H, and low subtree L."""
-        # TODO - write parser that constructs trees from Newick format strings
-
-        def buildtree(tokens):  # recursively build tree from ParseResults object
-            root = BNode(G, tokens.root)
-            if tokens.high or tokens.low:
-                high = None
-                low = None
-                if tokens.high:
-                    high = buildtree(tokens.high)
-                if tokens.low:
-                    low = buildtree(tokens.low)
-                root.addchildren(high=high, low=low)
-            return root
-
-        node = Word(alphanums)
-        LPAREN, COMMA, RPAREN = map(Suppress, '(,)')
-        tree = Forward()
-        subtrees = LPAREN + Group(Optional(tree)).setResultsName('high') + COMMA + \
-                   Group(Optional(tree)).setResultsName('low') + RPAREN
-        tree << node.setResultsName('root') + Optional(subtrees)
-
-        tokens = tree.parseString(tree_str)
-        root = buildtree(tokens)
-        root.calc_tree_obj()
-        return root
-
-
 def load_map(mapname):  # TODO - separate gusher map and penalty assignment(s) into 2 files
     """Create graph from the gusher layout and penalty values specified in external file."""
-    path = f'goldie seeking/gusher graphs/{mapname}.txt'
+    path = f'gusher graphs/{mapname}.txt'
     G = nx.read_adjlist(path, comments=COMMENTCHAR)
 
     # Assign penalties
@@ -141,7 +44,7 @@ def getstratfast(G):
     if n == 0:
         return None
     if n == 1:
-        return BNode(G, list(G.nodes)[0])
+        return GusherNode(G, list(G.nodes)[0])
 
     # Choose vertex V w/ lowest penalty and degree closest to n/2
     minpenalty = min([G.nodes[g]['penalty'] for g in G])
@@ -157,7 +60,7 @@ def getstratfast(G):
     low = getstratfast(B)
 
     # Construct optimal tree
-    root = BNode(G, V)
+    root = GusherNode(G, V)
     root.addchildren(high, low, n)
     return root
 
@@ -176,8 +79,8 @@ if __name__ == '__main__':
         nx.draw_networkx_labels(G, pos_attrs, labels=nx.get_node_attributes(G, 'penalty'))
         plt.show()
 
-    recstrat = BNode.readtree('f(e(d(c,),), h(g(a,), i(b,)))', G)
-    print(f'recommended strat: {recstrat.writetree()}')
+    recstrat = readtree('f(e(d(c,),), h(g(a,), i(b,)))', G)
+    print(f'recommended strat: {writetree(recstrat)}')
 
     optstrat = getstratfast(G)
-    print(f'algorithm\'s strat: {optstrat.writetree()}')
+    print(f'algorithm\'s strat: {writetree(optstrat)}')
