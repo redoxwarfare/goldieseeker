@@ -40,29 +40,18 @@ class GusherNode:
             objH = self.high.obj
         if n:
             self.obj = self.penalty * (n - 1) + objL + objH
-        self.updatecost()
+        # self.updatecost()
 
     def updatecost(self):
-        """Recursively update costs of node and its children."""
-        if self.parent:
-            self.cost = self.parent.penalty + self.parent.cost
-        if self.low:
-            self.low.updatecost()
-        if self.high:
-            self.high.updatecost()
+        """Update costs of node and its children."""
+        for node in self:
+            if node.parent:
+                node.cost = node.parent.cost + node.parent.penalty
 
     def calc_tree_obj(self):
         """Calculate and store the objective score of the tree rooted at this node."""
-        def recurse_sum(node):
-            hsum = 0
-            lsum = 0
-            if node.high:
-                hsum = recurse_sum(node.high)
-            if node.low:
-                lsum = recurse_sum(node.low)
-            return node.cost + hsum + lsum
         self.updatecost()
-        self.obj = recurse_sum(self)
+        self.obj = sum(node.cost for node in self)
 
 
 def writetree(root):

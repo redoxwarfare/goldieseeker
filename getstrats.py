@@ -85,6 +85,7 @@ recstrats = {'sg': 'f(e(d(c,),), h(g(a,), i(b,)))',
              'ss': 'f(d(b, g), e(c, a))',
              'mb': 'b(c(d(a,), e), c(f, h(g,)))',
              'lo': 'g(h(i,), d(f(e,), a(c(b,),)))'}
+desc = ('recommended', "algorithm's")
 
 if __name__ == '__main__':
     map_id = 'mb'
@@ -92,7 +93,10 @@ if __name__ == '__main__':
     plot_graph(G)
 
     recstrat = readtree(recstrats[map_id], G)
-    print(f'recommended strat: {writetree(recstrat)}')
-
     optstrat = getstratfast(G)
-    print(f'algorithm\'s strat: {writetree(optstrat)}')
+    optstrat.calc_tree_obj()
+    strats = (recstrat, optstrat)
+    for i in range(len(strats)):
+        print(f'{desc[i]} strat: {writetree(strats[i])}\n'
+              f'    objective score: {strats[i].obj}\n'
+              '    costs: {' + ', '.join([f'{g}: {g.cost}' for g in strats[i]]) + '}\n')
