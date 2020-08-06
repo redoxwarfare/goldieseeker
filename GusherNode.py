@@ -2,11 +2,11 @@ from pyparsing import alphanums, Word, Forward, Suppress, Optional, Group
 
 
 class GusherNode:
-    def __init__(self, G, name): # G is a networkx graph
+    def __init__(self, G, name):  # G is a networkx graph
         self.name = name
         self.low = None  # next gusher to open if this gusher is low
         self.high = None  # next gusher to open if this gusher is high
-        self.parent = None # gusher previously opened in sequence
+        self.parent = None  # gusher previously opened in sequence
         self.penalty = G.nodes[name]['penalty']  # penalty for opening this gusher
         self.cost = 0  # if Goldie is in this gusher, total penalty incurred by following decision tree
         self.obj = 0  # objective function evaluated on subtree with this node as root

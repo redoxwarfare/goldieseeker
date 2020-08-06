@@ -1,5 +1,5 @@
-$Spawning Grounds
-${'bcd': 4, 'ag': 3, '.': 2}
+$ Spawning Grounds
+$ {'bcd': 4, 'ag': 3, '.': 2}
 a b d g h
 b c d g i
 c d e f g

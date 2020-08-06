@@ -8,6 +8,7 @@ from GusherNode import GusherNode, writetree, readtree
 COMMENTCHAR = '$'
 DEFAULTCHAR = '.'
 
+
 def load_map(mapname):  # TODO - separate gusher map and penalty assignment(s) into 2 files
     """Create graph from the gusher layout and penalty values specified in external file."""
     path = f'gusher graphs/{mapname}.txt'
@@ -16,11 +17,11 @@ def load_map(mapname):  # TODO - separate gusher map and penalty assignment(s) i
     # Assign penalties
     with open(path) as f:
         # Read the map name from the first line of the file
-        name = f.readline().split(COMMENTCHAR)[-1]
-        G.graph['name'] = name
+        name = f.readline().lstrip(COMMENTCHAR + ' ')
+        G.graph['name'] = name.rstrip()
 
         # Read the penalty dictionary from the second line of the file
-        penalties = l_eval(f.readline().split(COMMENTCHAR)[-1])
+        penalties = l_eval(f.readline().lstrip(COMMENTCHAR + ' '))
 
         # For each node, check if its name is in any of the penalty groups and assign the corresponding penalty value
         # If no matches are found, assign the default penalty
