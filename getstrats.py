@@ -92,8 +92,9 @@ def getstrat(G, debug=False):
     def makenode(name):
         return GusherNode(name, G)
 
-    subgraphs = dict()  # dict for associating subgraphs with their corresponding optimal subtrees and objective scores
+    subgraphs = dict()
 
+    # dict for associating subgraphs with their corresponding optimal subtrees and objective scores
     # stores optimal subtrees as strings to avoid entangling references between different candidate subtrees
 
     def getstratrecurse(O, subgraphs):
@@ -162,18 +163,19 @@ recstrats = {'sg': 'f(e(d(c,),), h(g(a,), i(b,)))',
 desc = ('recommended', "algorithm's")
 
 if __name__ == '__main__':
-    map_id = 'mb'
-    G = load_graph(map_id)
-    plot_graph(G)
+    for map_id in recstrats:
+        G = load_graph(map_id)
+        plot_graph(G)
+        print(f'\nMap: {G.graph["name"]}')
 
-    recstrat = readtree(recstrats[map_id], G)
-    optstrat = getstrat(G)
-    optstrat.calc_tree_obj()
-    strats = (recstrat, optstrat)
-    for i in range(len(strats)):
-        print(f'\n{desc[i]} strat: {writetree(strats[i])}\n'
-              f'    objective score: {strats[i].obj}\n'
-              '    costs: {' + ', '.join(f'{g}: {g.cost}' for g in strats[i] if g.findable) + '}')
+        recstrat = readtree(recstrats[map_id], G)
+        optstrat = getstrat(G)
+        optstrat.calc_tree_obj()
+        strats = (recstrat, optstrat)
+        for i in range(len(strats)):
+            print(f'{desc[i]} strat: {writetree(strats[i])}\n'
+                  f'    objective score: {strats[i].obj}\n'
+                  '    costs: {' + ', '.join(f'{g}: {g.cost}' for g in strats[i] if g.findable) + '}')
 
     foo = readtree(writetree(recstrat), G)
     bar = readtree(writetree(optstrat), G)
