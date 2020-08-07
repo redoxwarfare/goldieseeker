@@ -32,16 +32,40 @@ class GusherNode:
         if self.low:
             yield from self.low.__iter__()
 
+    def __eq__(self, other):
+        if not other:
+            return False
+        else:
+            return self.name == other.name and self.penalty == other.penalty and self.findable == other.findable
+
+    def sametree(self, other):
+        if not other:
+            return False
+        sameroot = (self == other)
+        if self.high:
+            samehigh = self.high.sametree(other.high)
+        else:
+            samehigh = not other.high
+        if self.low:
+            samelow = self.low.sametree(other.low)
+        else:
+            samelow = not other.low
+        return sameroot and samehigh and samelow
+
     def addchildren(self, high, low, n=0):
         objL = 0
         objH = 0
         if low:
+            assert not self.low, f'gusher {self} already has low child {self.low}'
+            assert not low.parent, f'gusher {low} already has parent {low.parent}'
             self.low = low
-            low.parent = self
+            self.low.parent = self
             objL = self.low.obj
         if high:
+            assert not self.high, f'gusher {self} already has high child {self.high}'
+            assert not high.parent, f'gusher {high} already has parent {high.parent}'
             self.high = high
-            high.parent = self
+            self.high.parent = self
             objH = self.high.obj
         if n:
             self.obj = self.penalty * (n - 1) + objL + objH
@@ -83,7 +107,7 @@ subtrees = LPAREN + subtree.setResultsName('high') + COMMA + subtree.setResultsN
 tree << node.setResultsName('root') + Optional(subtrees)
 
 
-def readtree(tree_str, graph):
+def readtree(tree_str, graph, obj=0):
     """Read the strategy encoded in tree_str and build the corresponding decision tree.
     V(H, L) represents the tree with root node V, high subtree H, and low subtree L.
     A node name followed by * indicates that the gusher is being opened solely for information and the Goldie will
@@ -103,5 +127,8 @@ def readtree(tree_str, graph):
 
     tokens = tree.parseString(tree_str)
     root = buildtree(tokens)
-    root.calc_tree_obj()
+    if obj:
+        root.obj = obj
+    else:
+        root.calc_tree_obj()
     return root
