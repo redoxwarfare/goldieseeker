@@ -118,7 +118,7 @@ def getstrat(G, debug=False):
                 low = getstratrecurse(B, subgraphs)
                 objH = high.obj if high else 0
                 objL = low.obj if low else 0
-                pV = O.nodes[V]['penalty']
+                pV = G.nodes[V]['penalty']
                 Vcand[V] = ((n - 1) * pV + objH + objL, high, low)
             printlog(f'options: \n'
                      ''.join(f'    {V}: ({t[0]}, {t[1]}, {t[2]})\n' for V, t in Vcand.items()))
@@ -161,6 +161,7 @@ if __name__ == '__main__':
 
         recstrat = readtree(recstrats[map_id], G)
         optstrat = getstrat(G)
+        optstrat.updatecost()
         strats = (recstrat, optstrat)
         for i in range(len(strats)):
             try:
