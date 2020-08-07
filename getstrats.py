@@ -52,8 +52,9 @@ def getstrat(G):
     return root
 
 
-def getstratfast(G):
-    """Build an optimal decision tree for the gusher graph G."""
+def getstratgreedy(G):
+    """Build a decision tree for the gusher graph G. Greedy algorithm not guaranteed to find the optimal tree,
+    but should still return something decent."""
     n = len(G)
     # Base cases
     if n == 0:
@@ -71,15 +72,15 @@ def getstratfast(G):
     nonadj = set(G).difference(A)
     nonadj.remove(V)
     B = G.subgraph(nonadj)  # subgraph of vertices non-adjacent to V (excluding V)
-    high = getstratfast(A)
-    low = getstratfast(B)
+    high = getstratgreedy(A)
+    low = getstratgreedy(B)
 
     # Construct optimal tree
     root = GusherNode(V, graph=G)
     root.addchildren(high, low, n)
     return root
 
-
+# TODO - start compilation of strategy variants for each map
 recstrats = {'sg': 'f(e(d(c,),), h(g(a,), i(b,)))',
              'ap': 'f(g(e, c(d,)), g*(a, b))',
              'ss': 'f(d(b, g), e(c, a))',
@@ -88,12 +89,12 @@ recstrats = {'sg': 'f(e(d(c,),), h(g(a,), i(b,)))',
 desc = ('recommended', "algorithm's")
 
 if __name__ == '__main__':
-    map_id = 'mb'
+    map_id = 'ap'
     G = load_graph(map_id)
     plot_graph(G)
 
     recstrat = readtree(recstrats[map_id], G)
-    optstrat = getstratfast(G)
+    optstrat = getstratgreedy(G)
     optstrat.calc_tree_obj()
     strats = (recstrat, optstrat)
     for i in range(len(strats)):

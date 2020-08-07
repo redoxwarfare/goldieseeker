@@ -85,7 +85,9 @@ tree << node.setResultsName('root') + Optional(subtrees)
 
 def readtree(tree_str, graph):
     """Read the strategy encoded in tree_str and build the corresponding decision tree.
-    V(H, L) represents the tree with root node V, high subtree H, and low subtree L."""
+    V(H, L) represents the tree with root node V, high subtree H, and low subtree L.
+    A node name followed by * indicates that the gusher is being opened solely for information and the Goldie will
+    never be found there."""
     def buildtree(tokens):  # recursively convert ParseResults object into GusherNode tree
         findable = tokens.root[-1] is not NEVERFINDFLAG
         rootname = tokens.root if findable else tokens.root.rstrip(NEVERFINDFLAG)
