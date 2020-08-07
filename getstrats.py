@@ -93,7 +93,6 @@ def getstrat(G, debug=False):
         return GusherNode(name, G)
 
     subgraphs = dict()
-
     # dict for associating subgraphs with their corresponding optimal subtrees and objective scores
     # stores optimal subtrees as strings to avoid entangling references between different candidate subtrees
 
@@ -146,14 +145,6 @@ def getstrat(G, debug=False):
     return root
 
 
-def check_sanity(tree):
-    for g in tree:
-        if g.high:
-            assert g.high.parent == g, f'node {g}, node.high {g.high}, node.high.parent {g.high.parent}'
-        if g.low:
-            assert g.low.parent == g, f'node {g}, node.low {g.high}, node.low.parent {g.low.parent}'
-
-
 # TODO - start compilation of strategy variants for each map
 recstrats = {'sg': 'f(e(d(c,),), h(g(a,), i(b,)))',
              'ap': 'f(g(e, c(d,)), g*(a, b))',
@@ -170,19 +161,13 @@ if __name__ == '__main__':
 
         recstrat = readtree(recstrats[map_id], G)
         optstrat = getstrat(G)
-        optstrat.calc_tree_obj()
         strats = (recstrat, optstrat)
         for i in range(len(strats)):
+            try:
+                strats[i].validate()
+            except AssertionError as e:
+                print(f'validate() failed for {desc[i]} strat with error "{e}"')
             print(f'{desc[i]} strat: {writetree(strats[i])}\n'
                   f'    objective score: {strats[i].obj}\n'
                   '    costs: {' + ', '.join(f'{g}: {g.cost}' for g in strats[i] if g.findable) + '}')
 
-    foo = readtree(writetree(recstrat), G)
-    bar = readtree(writetree(optstrat), G)
-    heck = readtree('a(b(c, d), e(f, g))', G)
-    assert foo.sametree(recstrat)
-    assert bar.sametree(optstrat)
-    assert not foo.sametree(heck)
-    assert not bar.sametree(heck)
-
-    check_sanity(optstrat)

@@ -81,6 +81,26 @@ class GusherNode:
         self.updatecost()
         self.obj = sum(node.cost for node in self if node.findable)
 
+    def validate(self):
+        """Check that tree is a valid strategy."""
+        def recurse(node, predecessors):
+            # can't open the same gusher twice
+            assert str(node) not in predecessors, f'node {node} found in own predecessors: {predecessors}'
+
+            if node.high or node.low:
+                pred_new = predecessors.copy()
+                pred_new.add(str(node))
+
+            # make sure parent/child references are consistent
+            if node.high:
+                assert node.high.parent == node, f'node {node}, node.high {node.high}, \
+                                                   node.high.parent {node.high.parent}'
+                recurse(node.high, pred_new)
+            if node.low:
+                assert node.low.parent == node, f'node {node}, node.low {node.high}, node.low.parent {node.low.parent}'
+                recurse(node.low, pred_new)
+        recurse(self, set())
+
 
 def writetree(root):
     """Write the strategy encoded by the subtree rooted at 'root' in modified Newick format.
