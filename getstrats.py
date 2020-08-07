@@ -46,10 +46,13 @@ def plot_graph(graph):
     plt.show()
 
 
-# TODO - write more thorough version of getstrat that checks all possible trees and uses dynamic programming
-def getstrat(G):
-    root = None
-    return root
+def splitgraph(G, V):
+    """Split graph G into two subgraphs: nodes adjacent to vertex V, and nodes (excluding V) not adjacent to V."""
+    A = G.subgraph(G.adj[V])  # subgraph of vertices adjacent to V
+    nonadj = set(G).difference(A)
+    nonadj.remove(V)
+    B = G.subgraph(nonadj)  # subgraph of vertices non-adjacent to V (excluding V)
+    return A, B
 
 
 def getstratgreedy(G):
@@ -68,10 +71,7 @@ def getstratgreedy(G):
     V = min(Vcand, key=lambda g: abs(G.degree[g] - n / 2))
 
     # Build subtrees
-    A = G.subgraph(G.adj[V])  # subgraph of vertices adjacent to V
-    nonadj = set(G).difference(A)
-    nonadj.remove(V)
-    B = G.subgraph(nonadj)  # subgraph of vertices non-adjacent to V (excluding V)
+    A, B = splitgraph(G, V)
     high = getstratgreedy(A)
     low = getstratgreedy(B)
 
@@ -79,6 +79,47 @@ def getstratgreedy(G):
     root = GusherNode(V, graph=G)
     root.addchildren(high, low, n)
     return root
+
+
+def getstrat(G):
+    """Build a decision tree for the gusher graph G. Memoized algorithm will find the optimal "narrow" decision tree,
+    but does not consider "wide" decision trees (strategies in which gushers that cannot contain the Goldie are opened
+    to obtain information about gushers that could contain the Goldie)."""
+    subgraphs = dict()  # dict for associating subgraphs with their corresponding optimal subtrees
+
+    def getstratrecurse(O, subgraphs):
+        if O in subgraphs:  # don't recalculate optimal trees for subgraphs we've already solved
+            return subgraphs[O]
+
+        root = None
+        obj = 0
+        n = len(O)
+        if n == 1:  # base case
+            root = GusherNode(list(O.nodes)[0], graph=O)
+        elif n > 1:
+            Vcand = dict()  # for each possible root V, store objective score for resulting tree
+            for V in O:
+                A, B = splitgraph(O, V)
+                high = getstratrecurse(A, subgraphs)
+                low = getstratrecurse(B, subgraphs)
+                objH = high.obj if high else 0
+                objL = low.obj if low else 0
+                pV = O.nodes[V]['penalty']
+                Vcand[V] = (n - 1) * pV + objH + objL
+            V = min(Vcand, key=Vcand.get)  # choose the V that minimizes objective score
+            obj = Vcand[V]
+
+            # Build tree
+            root = GusherNode(V, graph=O)
+            root.addchildren(high, low)
+
+        if root:
+            root.obj = obj  # don't need calc_tree_obj since calculations are done as part of tree-finding process
+        subgraphs[O] = root
+        return root
+
+    return getstratrecurse(G, subgraphs)
+
 
 # TODO - start compilation of strategy variants for each map
 recstrats = {'sg': 'f(e(d(c,),), h(g(a,), i(b,)))',
@@ -94,7 +135,7 @@ if __name__ == '__main__':
     plot_graph(G)
 
     recstrat = readtree(recstrats[map_id], G)
-    optstrat = getstratgreedy(G)
+    optstrat = getstrat(G)
     optstrat.calc_tree_obj()
     strats = (recstrat, optstrat)
     for i in range(len(strats)):

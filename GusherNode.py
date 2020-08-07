@@ -90,8 +90,7 @@ def readtree(tree_str, graph):
     never be found there."""
     def buildtree(tokens):  # recursively convert ParseResults object into GusherNode tree
         findable = tokens.root[-1] is not NEVERFINDFLAG
-        rootname = tokens.root if findable else tokens.root.rstrip(NEVERFINDFLAG)
-        root = GusherNode(rootname, graph=graph, findable=findable)
+        root = GusherNode(tokens.root.rstrip(NEVERFINDFLAG), graph=graph, findable=findable)
         if tokens.high or tokens.low:
             high = None
             low = None
