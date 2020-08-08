@@ -46,12 +46,17 @@ def plot_graph(graph):
     plt.show()
 
 
-def splitgraph(G, V):
+def splitgraph(G, V, G_orig=None):
     """Split graph G into two subgraphs: nodes adjacent to vertex V, and nodes (excluding V) not adjacent to V."""
-    A = G.subgraph(G.adj[V])  # subgraph of vertices adjacent to V
+    if not G_orig:
+        G_orig = G
+    adj = G_orig.adj[V]
+    A = G.subgraph(adj)  # subgraph of vertices adjacent to V
+
     nonadj = set(G).difference(A)
-    nonadj.remove(V)
+    nonadj = nonadj.difference(set(V))
     B = G.subgraph(nonadj)  # subgraph of vertices non-adjacent to V (excluding V)
+
     return A, B
 
 
@@ -90,98 +95,35 @@ def getstratnarrow(G, debug=False):
         if debug:
             print(*args, **kwargs)
 
-    def makenode(name):
-        return GusherNode(name, G)
-
     subgraphs = dict()
+
     # dict for associating subgraphs with their corresponding optimal subtrees and objective scores
     # stores optimal subtrees as strings to avoid entangling references between different candidate subtrees
 
-    def getstratrecurse(O, subgraphs):
-        Okey = tuple(O)
-        if Okey in subgraphs:  # don't recalculate optimal trees for subgraphs we've already solved
-            return readtree(subgraphs[Okey][0], G, obj=subgraphs[Okey][1])
-        printlog(f'O: {Okey}, solved {len(subgraphs)} subgraphs')
-
-        root = None
-        obj = 0
-        n = len(O)
-        if n == 1:  # Base case
-            root = makenode(list(O.nodes)[0])
-        elif n > 1:
-            Vcand = dict()  # For each possible root V, store objective score for resulting tree
-            for V in O:
-                A, B = splitgraph(O, V)
-                printlog(f'    check gusher {V}\n'
-                         f'        adj: {tuple(A)}\n'
-                         f'        non-adj: {tuple(B)}')
-                high = getstratrecurse(A, subgraphs)
-                low = getstratrecurse(B, subgraphs)
-                objH = high.obj if high else 0
-                objL = low.obj if low else 0
-                pV = G.nodes[V]['penalty']
-                Vcand[V] = ((n - 1) * pV + objH + objL, high, low)
-            printlog(f'options: \n'
-                     ''.join(f'    {V}: ({t[0]}, {t[1]}, {t[2]})\n' for V, t in Vcand.items()))
-            V = min(Vcand, key=lambda g: Vcand[g][0])  # Choose the V that minimizes objective score
-            obj, high, low = Vcand[V]
-
-            # Build tree
-            root = makenode(V)
-            root.addchildren(high, low)
-            printlog(f'    root: {str(root)}, {obj}\n'
-                     f'    high: {str(high)}, {high.obj if high else 0}\n'
-                     f'    low: {str(low)}, {low.obj if low else 0}')
-
-        if root:
-            root.obj = obj  # Don't need calc_tree_obj since calculations are done as part of tree-finding process
-            if root.high or root.low:
-                subgraphs[Okey] = (writetree(root), root.obj)
-        return root
-
-    root = getstratrecurse(G, subgraphs)
-    root.updatecost()
-    if debug:
-        for O in subgraphs:
-            print(f'{O}: {subgraphs[O][1] if subgraphs[O] else 0}')
-    return root
-
-
-def getstrat(G, debug=False):
-    """Build the optimal "wide" decision tree for the gusher graph G. Memoized algorithm."""
-    def printlog(*args, **kwargs):
-        if debug:
-            print(*args, **kwargs)
-
-    subgraphs = dict()
-    # dict for associating subgraphs with their corresponding optimal subtrees and objective scores
-    # stores optimal subtrees as strings to avoid entangling references between different candidate subtrees
-
-    def getstratrecurse(O, adjO, subgraphs):
-        key = tuple(tuple(O), tuple(adjO))
+    def recursenarrow(U, subgraphs):  # U = subgraph of unopened nodes
+        key = tuple(U)
         if key in subgraphs:  # don't recalculate optimal trees for subgraphs we've already solved
             return readtree(subgraphs[key][0], G, obj=subgraphs[key][1])
-        printlog(f'O: {key}, solved {len(subgraphs)} subgraphs')
+        printlog(f'U: {key}, solved {len(subgraphs)} subgraphs')
 
         root = None
         obj = 0
-        n = len(O)
+        n = len(U)
         if n == 1:  # Base case
-            root = GusherNode(list(O.nodes)[0], G)
+            root = GusherNode(list(U.nodes)[0], G)
         elif n > 1:
             Vcand = dict()  # For each possible root V, store objective score for resulting tree
-            for V in O:
-                A, B = splitgraph(O, V)
-                adjA = nx.union_all(A, B)
+            for V in U:
+                A, B = splitgraph(U, V)
                 printlog(f'    check gusher {V}\n'
                          f'        adj: {tuple(A)}\n'
                          f'        non-adj: {tuple(B)}')
-                high = getstratrecurse(A, subgraphs)
-                low = getstratrecurse(B, subgraphs)
+                high = recursenarrow(A, subgraphs)
+                low = recursenarrow(B, subgraphs)
                 objH = high.obj if high else 0
                 objL = low.obj if low else 0
                 pV = G.nodes[V]['penalty']
-                Vcand[V] = ((n - 1) * pV + objH + objL, high, low)
+                Vcand[V] = ((n-1)*pV+objH+objL, high, low)
             printlog(f'options: \n'
                      ''.join(f'    {V}: ({t[0]}, {t[1]}, {t[2]})\n' for V, t in Vcand.items()))
             V = min(Vcand, key=lambda g: Vcand[g][0])  # Choose the V that minimizes objective score
@@ -200,12 +142,90 @@ def getstrat(G, debug=False):
                 subgraphs[key] = (writetree(root), root.obj)
         return root
 
-    root = getstratrecurse(G, subgraphs)
+    root = recursenarrow(G, subgraphs)
     root.updatecost()
     if debug:
-        for O in subgraphs:
-            print(f'{O}: {subgraphs[O][1] if subgraphs[O] else 0}')
+        for subgraph in subgraphs:
+            print(f'{subgraph}: {subgraphs[subgraph][1] if subgraphs[subgraph] else 0}')
     return root
+
+
+def getstrat(G, debug=False):
+    """Build the optimal "wide" decision tree for the gusher graph G. Memoized algorithm."""
+
+    def printlog(*args, **kwargs):
+        if debug:
+            print(*args, **kwargs)
+
+    def widen(working, excluded, orig_graph):
+        """Widen the working set of vertices to include any vertices adjacent to those in the original set, while
+        excluding the vertices in the excluded set."""
+        wide = set(working)
+        for node in working:
+            wide = wide.union(orig_graph.adj[node])
+        wide = wide.difference(excluded)
+        return wide
+
+    subgraphs = dict()
+
+    # dict for associating subgraphs with their corresponding optimal subtrees and objective scores
+    # stores optimal subtrees as strings to avoid entangling references between different candidate subtrees
+
+    def recursewide(U, O, subgraphs):
+        # U = subgraph of unopened gushers that might have the Goldie
+        # O = set of opened gushers
+        key = (tuple(U), frozenset(O))
+        keystr = f'({", ".join(str(u) for u in U)} | {", ".join(str(o) for o in O)})'
+        if key in subgraphs:  # don't recalculate optimal trees for subgraphs we've already solved
+            return readtree(subgraphs[key][0], G, obj=subgraphs[key][1])
+        printlog(f'{keystr}; solved {len(subgraphs)} subgraphs')
+
+        root = None
+        obj = 0
+        n = len(U)
+        if n == 1:  # Base case
+            root = GusherNode(list(U.nodes)[0], G)
+        elif n > 1:
+            Uwide = widen(U, O, G)  # also consider gushers adjacent to those in U
+            Vcand = dict()  # For each possible root V, store objective score for resulting tree
+            for V in Uwide:
+                findable = V in U
+                A, B = splitgraph(U, V, G)
+                printlog(f'{keystr}; check gusher {V}{"*" if not findable else ""}\n'
+                         f'    adj: {tuple(A)}\n'
+                         f'    non-adj: {tuple(B)}')
+                high = recursewide(A, O.union(set(V)), subgraphs)
+                low = recursewide(B, O.union(set(V)), subgraphs)
+
+                objH = high.obj if high else 0
+                sizeH = high.size if high else 0
+                objL = low.obj if low else 0
+                sizeL = low.size if low else 0
+                pV = G.nodes[V]['penalty']
+                Vcand[V] = ((sizeH+sizeL)*pV+objH+objL, high, low, findable)
+            printlog(f'{keystr}; options: \n'+
+                     '\n'.join(f'    {V}{"*" if not t[3] else ""} > ({t[1]}, {t[2]}), score: {t[0]}'
+                               for V, t in Vcand.items()))
+            V = min(Vcand, key=lambda g: Vcand[g][0])  # Choose the V that minimizes objective score
+            obj, high, low, findable = Vcand[V]
+
+            # Build tree
+            root = GusherNode(V, G, findable=findable)
+            root.addchildren(high, low)
+            printlog(f'    root: {str(root)}, {obj}\n'
+                     f'    high: {str(high)}, {high.obj if high else 0}\n'
+                     f'    low: {str(low)}, {low.obj if low else 0}\n')
+
+        if root:
+            root.obj = obj  # Don't need calc_tree_obj since calculations are done as part of tree-finding process
+            if root.high or root.low:
+                subgraphs[key] = (writetree(root), root.obj)
+        return root
+
+    root = recursewide(G, set(), subgraphs)
+    root.updatecost()
+    return root
+
 
 # TODO - start compilation of strategy variants for each map
 recstrats = {'sg': 'f(e(d(c,),), h(g(a,), i(b,)))',
@@ -213,32 +233,33 @@ recstrats = {'sg': 'f(e(d(c,),), h(g(a,), i(b,)))',
              'ss': 'f(d(b, g), e(c, a))',
              'mb': 'b(c(d(a,), e), c*(f, h(g,)))',
              'lo': 'g(h(i,), d(f(e,), a(c(b,),)))'}
-desc = ("recommended", "greedy", "optimized", "alternate")
+mbhybrid = readtree('b(e(d, c(a,)), c*(f, h(g,)))', load_graph('mb'))
+lostaysee = readtree('h(f(e, g(i,)), f*(d, a(c(b,),)))', load_graph('lo'))
 
 if __name__ == '__main__':
-    map_id = 'lo'
+    map_id = 'mb'
     G = load_graph(map_id)
     plot_graph(G)
     print(f'\nMap: {G.graph["name"]}')
 
     recstrat = readtree(recstrats[map_id], G)
     greedystrat = getstratgreedy(G)
-    greedystrat.updatecost()
-    optstrat = getstratnarrow(G)
-    optstrat.updatecost()
+    narrowstrat = getstratnarrow(G)
+    optstrat = getstrat(G, debug=True)
 
-    mbhybrid = readtree('b(e(d, c(a,)), c*(f, h(g,)))', load_graph('mb'))
-    lostaysee = readtree('h(f(e, g(i,)), f*(d, a(c(b,),)))', load_graph('lo'))
-
-    strats = (recstrat, greedystrat, optstrat, lostaysee)
-    for i in range(len(strats)):
-        strat = strats[i]
+    strats = {"greedy": greedystrat,
+              "optimized narrow": narrowstrat,
+              "optimized wide": optstrat,
+              "recommended": recstrat}
+    for desc in strats:
+        strat = strats[desc]
         try:
             strat.validate()
         except AssertionError as e:
-            print(f'validate() failed for {desc[i]} strat with error "{e}"')
+            print(f'validate() failed for {desc} strat with error "{e}"')
+        strat.updatecost()
         costs = {str(g): g.cost for g in strat if g.findable}
-        print(f'{desc[i]} strat: {writetree(strat)}\n'
+        print(f'{desc} strat: {writetree(strat)}\n'
               f'    objective score: {strat.obj}\n'
-              f'    costs: {{' + ', '.join(f'{node}: {costs[node]}' for node in costs) + '}\n'
-              f'    mean: {mean(costs.values())}, stdev: {pstdev(costs.values())}')
+              f'    costs: {{'+', '.join(f'{node}: {costs[node]}' for node in costs)+'}\n'
+                                                                                     f'    mean cost: {mean(costs.values()):0.2f}, stdev: {pstdev(costs.values()):0.2f}')

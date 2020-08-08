@@ -12,6 +12,7 @@ class GusherNode:
         self.findable = findable  # whether it is possible to find the Goldie at this gusher
         # if findable is False, the gusher is being opened solely for information (e.g. gusher C on Marooner's Bay)
         # non-findable nodes still count towards their children's costs, but don't count towards tree's objective score
+        self.size = 1 if findable else 0  # number of findable nodes in subtree rooted at this node
         if graph:
             self.penalty = graph.nodes[name]['penalty']  # penalty for opening this gusher
         else:
@@ -20,10 +21,11 @@ class GusherNode:
         self.obj = 0  # objective function evaluated on subtree with this node as root
 
     def __str__(self):
-        return self.name
+        return self.name+(NEVERFINDFLAG if not self.findable else "")
 
     def __repr__(self):
-        return f'{{{self.name} > ({self.high}, {self.low}), p: {self.penalty}, c: {self.cost}, o: {self.obj}}}'
+        return f'{{{str(self)} > ({self.high}, {self.low}), '+ \
+               f'p: {self.penalty}, c: {self.cost}, o: {self.obj}}}'
 
     def __iter__(self):
         yield self
@@ -41,7 +43,8 @@ class GusherNode:
     def sametree(self, other):
         if not other:
             return False
-        sameroot = (self == other)
+        if not (self == other):
+            return False
         if self.high:
             samehigh = self.high.sametree(other.high)
         else:
@@ -50,25 +53,28 @@ class GusherNode:
             samelow = self.low.sametree(other.low)
         else:
             samelow = not other.low
-        return sameroot and samehigh and samelow
+        return samehigh and samelow
 
     def addchildren(self, high, low, n=0):
-        objL = 0
-        objH = 0
+        objL, objH = 0, 0
+        sizeL, sizeH = 0, 0
         if low:
             assert not self.low, f'gusher {self} already has low child {self.low}'
             assert not low.parent, f'gusher {low} already has parent {low.parent}'
             self.low = low
             self.low.parent = self
             objL = self.low.obj
+            sizeL = self.low.size
         if high:
             assert not self.high, f'gusher {self} already has high child {self.high}'
             assert not high.parent, f'gusher {high} already has parent {high.parent}'
             self.high = high
             self.high.parent = self
             objH = self.high.obj
+            sizeH = self.high.size
         if n:
             self.obj = self.penalty * (n - 1) + objL + objH
+        self.size = sizeL+sizeH+(1 if self.findable else 0)
 
     def updatecost(self):
         """Update costs of node and its children."""
@@ -91,14 +97,15 @@ class GusherNode:
                 pred_new = predecessors.copy()
                 pred_new.add(str(node))
 
-            # make sure parent/child references are consistent
-            if node.high:
-                assert node.high.parent == node, f'node {node}, node.high {node.high}, \
-                                                   node.high.parent {node.high.parent}'
-                recurse(node.high, pred_new)
-            if node.low:
-                assert node.low.parent == node, f'node {node}, node.low {node.high}, node.low.parent {node.low.parent}'
-                recurse(node.low, pred_new)
+                # make sure parent/child references are consistent
+                if node.high:
+                    assert node.high.parent == node, f'node {node}, node.high {node.high}, ' \
+                                                     f'node.high.parent {node.high.parent}'
+                    recurse(node.high, pred_new)
+                if node.low:
+                    assert node.low.parent == node, f'node {node}, node.low {node.high}, ' \
+                                                    f'node.low.parent {node.low.parent}'
+                    recurse(node.low, pred_new)
         recurse(self, set())
 
 
@@ -107,15 +114,14 @@ def writetree(root):
     V(H, L) represents the tree with root node V, high subtree H, and low subtree L.
     A node name followed by * indicates that the gusher is being opened solely for information and the Goldie will
     never be found there."""
-    flag = '' if root.findable else NEVERFINDFLAG
     if root.high and root.low:
-        return f'{root}{flag}({writetree(root.high)}, {writetree(root.low)})'
+        return f'{root}({writetree(root.high)}, {writetree(root.low)})'
     elif root.high:
-        return f'{root}{flag}({writetree(root.high)},)'
+        return f'{root}({writetree(root.high)},)'
     elif root.low:
-        return f'{root}{flag}(,{writetree(root.low)})'
+        return f'{root}(,{writetree(root.low)})'
     else:
-        return f'{root}{flag}'
+        return f'{root}'
 
 
 # Decision tree grammar
