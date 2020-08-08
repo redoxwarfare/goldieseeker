@@ -14,6 +14,13 @@ from statistics import mean, pstdev
 COMMENT_CHAR = '$'
 DEFAULT_CHAR = '.'
 
+# parser for input arguments
+parser = argparse.ArgumentParser(add_help=False)
+parser.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
+                    help='Show this help message.')
+parser.add_argument("map_id", nargs='*', help="name(s) of .txt file(s) in gusher graphs folder for map(s) to analyze")
+parser.add_argument("-l", "--log", help="print log of search algorithm's internal process", action='store_true')
+
 
 def load_graph(mapname):  # TODO - separate gusher map and penalty assignment(s) into 2 files
     """Create graph from the gusher layout and penalty values specified in external file."""
@@ -62,7 +69,7 @@ mbhybrid = readtree('b(e(d, c(a,)), c*(f, h(g,)))', load_graph('mb'))
 lostaysee = readtree('h(f(e, g(i,)), f*(d, a(c(b,),)))', load_graph('lo'))
 
 
-def print_report(map_id, log=False):
+def report(map_id, log=False):
     G = load_graph(map_id)
     print(f'\nMap: {G.graph["name"]}')
 
@@ -98,26 +105,25 @@ def print_report(map_id, log=False):
         plot_graph(G)
 
 
-parser = argparse.ArgumentParser(add_help=False)
-parser.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
-                    help='Show this help message.')
-parser.add_argument("map_id", nargs='*', help="name(s) of .txt file(s) in gusher graphs folder for map(s) to analyze")
-parser.add_argument("-l", "--log", help="print log of search algorithm's internal process", action='store_true')
-args = parser.parse_args()
-
-stop = False
-while not stop:
-    try:
-        for map_id in args.map_id:
-            print_report(map_id, args.log)
-    except FileNotFoundError as e:
-        print(f"Couldn't find {e.filename}!")
-
-    input_str = input('Input map ID(s) or "quit" to quit: ')
-    if input_str == "quit":
-        stop = True
-    else:
+def main():
+    args, other = parser.parse_known_args()
+    stop = False
+    while not stop:
         try:
-            args = parser.parse_args(input_str.split())
-        except SystemExit:
-            args.map_id = ()
+            for map_id in args.map_id:
+                report(map_id, args.log)
+        except FileNotFoundError as e:
+            print(f"Couldn't find {e.filename}!")
+
+        input_str = input('Input map ID(s) or "quit" to quit: ')
+        if input_str == "quit":
+            stop = True
+        else:
+            try:
+                args, other = parser.parse_known_args(input_str.split())
+            except SystemExit:
+                args.map_id = ()
+
+
+if __name__ == '__main__':
+    main()
