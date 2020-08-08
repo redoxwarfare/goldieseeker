@@ -1,4 +1,5 @@
 from GusherNode import GusherNode, writetree, readtree
+from GusherNode import NEVER_FIND_FLAG as FLAG
 
 
 def splitgraph(G, V, G_orig=None):
@@ -53,11 +54,11 @@ def getstrat(G, wide=True, debug=False):
     def widen(working, excluded, orig_graph):
         """Widen the working set of vertices to include any vertices adjacent to those in the original set, while
         excluding the vertices in the excluded set."""
-        wide = set(working)
+        widened = set(working)
         for node in working:
-            wide = wide.union(orig_graph.adj[node])
-        wide = wide.difference(excluded)
-        return wide
+            widened = widened.union(orig_graph.adj[node])
+        widened = widened.difference(excluded)
+        return widened
 
     subgraphs = dict()
     # dict for associating subgraphs with their corresponding optimal subtrees and objective scores
@@ -66,7 +67,7 @@ def getstrat(G, wide=True, debug=False):
     def recurse(suspected, opened, subgraphs):
         # suspected = subgraph of unopened gushers that might have the Goldie
         # opened = set of opened gushers
-        key = (tuple(suspected), frozenset(opened))
+        key = (frozenset(suspected), frozenset(opened))
         if key in subgraphs:  # don't recalculate optimal trees for subgraphs we've already solved
             return readtree(subgraphs[key][0], G, obj=subgraphs[key][1])
         key_str = f'({", ".join(str(u) for u in suspected)} | {", ".join(f"~{o}" for o in opened)})'
@@ -77,19 +78,20 @@ def getstrat(G, wide=True, debug=False):
         if n == 1:  # Base case
             root = GusherNode(list(suspected.nodes)[0], G)
         elif n > 1:
-            search_set = suspected
+            search_set = set(suspected)
             if wide:
                 search_set = widen(suspected, opened, G)  # also consider gushers adjacent to those in suspected
 
             Vcand = dict()  # For each possible root V, store objective score for resulting tree
             for V in search_set:
                 findable = V in suspected
+                opened_new = opened.union(set(V)) if wide else opened
                 A, B = splitgraph(suspected, V, G)
-                printlog(f'{key_str}; check gusher {V}{"*" if not findable else ""}\n'
+                printlog(f'{key_str}; check gusher {V}{FLAG if not findable else ""}\n'
                          f'    adj: {tuple(A)}\n'
                          f'    non-adj: {tuple(B)}')
-                high = recurse(A, (opened.union(set(V)) if wide else opened), subgraphs)
-                low = recurse(B, (opened.union(set(V)) if wide else opened), subgraphs)
+                high = recurse(A, opened_new, subgraphs)
+                low = recurse(B, opened_new, subgraphs)
                 objH, sizeH = 0, 0
                 objL, sizeL = 0, 0
                 if high:
@@ -101,7 +103,7 @@ def getstrat(G, wide=True, debug=False):
                 Vcand[V] = (cand_obj, high, low, findable)
 
             printlog(f'{key_str}; options: \n' +
-                     '\n'.join(f'    {V}{"*" if not t[3] else ""} > ({t[1]}, {t[2]}), score: {t[0]}'
+                     '\n'.join(f'    {V}{FLAG if not t[3] else ""} > ({t[1]}, {t[2]}), score: {t[0]}'
                                for V, t in Vcand.items()))
             V = min(Vcand, key=lambda g: Vcand[g][0])  # Choose the V that minimizes objective score
             obj, high, low, findable = Vcand[V]
