@@ -19,8 +19,8 @@ parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
                     help='Show this help message.')
 parser.add_argument("map_id", nargs='*', help="name(s) of .txt file(s) in gusher graphs folder for map(s) to analyze")
-parser.add_argument("-l", "--log", help="print log of search algorithm's internal process", action='store_true')
-parser.add_argument("-p", "--plot", help="display gusher graph", action='store_true')
+parser.add_argument("--log", help="print log of search algorithm's internal process", action='store_true')
+parser.add_argument("--plot", help="display gusher graph", action='store_true')
 
 
 def load_graph(mapname):  # TODO - separate gusher map and penalty assignment(s) into 2 files
