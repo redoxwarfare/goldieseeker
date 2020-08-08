@@ -1,6 +1,6 @@
 from pyparsing import Regex, Forward, Suppress, Optional, Group
 
-NEVERFINDFLAG = '*'
+NEVER_FIND_FLAG = '*'
 
 
 class GusherNode:
@@ -21,10 +21,10 @@ class GusherNode:
         self.obj = 0  # objective function evaluated on subtree with this node as root
 
     def __str__(self):
-        return self.name+(NEVERFINDFLAG if not self.findable else "")
+        return self.name + (NEVER_FIND_FLAG if not self.findable else "")
 
     def __repr__(self):
-        return f'{{{str(self)} > ({self.high}, {self.low}), '+ \
+        return f'{{{str(self)} > ({self.high}, {self.low}), ' + \
                f'p: {self.penalty}, c: {self.cost}, o: {self.obj}}}'
 
     def __iter__(self):
@@ -125,7 +125,7 @@ def writetree(root):
 
 
 # Decision tree grammar
-node = Regex(rf'\w+[{NEVERFINDFLAG}]?')
+node = Regex(rf'\w+[{NEVER_FIND_FLAG}]?')
 LPAREN, COMMA, RPAREN = map(Suppress, '(,)')
 tree = Forward()
 subtree = Group(Optional(tree))
@@ -138,9 +138,10 @@ def readtree(tree_str, graph, obj=0):
     V(H, L) represents the tree with root node V, high subtree H, and low subtree L.
     A node name followed by * indicates that the gusher is being opened solely for information and the Goldie will
     never be found there."""
+
     def buildtree(tokens):  # recursively convert ParseResults object into GusherNode tree
-        findable = tokens.root[-1] is not NEVERFINDFLAG
-        root = GusherNode(tokens.root.rstrip(NEVERFINDFLAG), graph=graph, findable=findable)
+        findable = tokens.root[-1] is not NEVER_FIND_FLAG
+        root = GusherNode(tokens.root.rstrip(NEVER_FIND_FLAG), graph=graph, findable=findable)
         if tokens.high or tokens.low:
             high = None
             low = None
