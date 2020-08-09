@@ -1,6 +1,6 @@
 import timeit
 from getstrats import getstrat
-from analyze import load_graph
+from getstrats import load_graph
 from statistics import mean, stdev
 
 s = 'from __main__ import getstrat, G'

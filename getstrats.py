@@ -173,7 +173,6 @@ def getstrat(graph, wide=True, debug=False):
 
 if __name__ == '__main__':
     import cProfile
-    from analyze import load_graph
     G = load_graph('sg')
 
     def profile(n=1):
