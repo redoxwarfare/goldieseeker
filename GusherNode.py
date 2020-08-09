@@ -56,25 +56,25 @@ class GusherNode:
         return samehigh and samelow
 
     def addchildren(self, high, low, n=0):
-        objL, objH = 0, 0
-        sizeL, sizeH = 0, 0
+        obj_l, obj_h = 0, 0
+        size_l, size_h = 0, 0
         if low:
             assert not self.low, f'gusher {self} already has low child {self.low}'
             assert not low.parent, f'gusher {low} already has parent {low.parent}'
             self.low = low
             self.low.parent = self
-            objL = self.low.obj
-            sizeL = self.low.size
+            obj_l = self.low.obj
+            size_l = self.low.size
         if high:
             assert not self.high, f'gusher {self} already has high child {self.high}'
             assert not high.parent, f'gusher {high} already has parent {high.parent}'
             self.high = high
             self.high.parent = self
-            objH = self.high.obj
-            sizeH = self.high.size
+            obj_h = self.high.obj
+            size_h = self.high.size
         if n:
-            self.obj = self.penalty * (n - 1) + objL + objH
-        self.size = sizeL+sizeH+(1 if self.findable else 0)
+            self.obj = self.penalty * (n - 1) + obj_l + obj_h
+        self.size = size_l+size_h+(1 if self.findable else 0)
 
     def updatecost(self):
         """Update costs of node and its children."""

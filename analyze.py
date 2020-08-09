@@ -39,16 +39,16 @@ lostaysee = readtree('h(f(e, g(i,)), f*(d, a(c(b,),)))', load_graph('lo'))
 
 
 def report(map_id, log=False, plot=False):
-    G = load_graph(map_id)
-    print(f'\nMap: {G.graph["name"]}')
+    graph = load_graph(map_id)
+    print(f'\nMap: {graph.graph["name"]}')
 
     if map_id in recstrats:
-        recstrat = readtree(recstrats[map_id], G)
+        recstrat = readtree(recstrats[map_id], graph)
     else:
         recstrat = None
-    greedystrat = getstratgreedy(G)
-    narrowstrat = getstrat(G, wide=False, debug=log)
-    optstrat = getstrat(G, debug=log)
+    greedystrat = getstratgreedy(graph)
+    narrowstrat = getstrat(graph, wide=False, debug=log)
+    optstrat = getstrat(graph, debug=log)
 
     strats = {"greedy": greedystrat,
               "narrow": narrowstrat,
@@ -72,7 +72,7 @@ def report(map_id, log=False, plot=False):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             print('(may need to close graph plot to continue)')
-            plot_graph(G)
+            plot_graph(graph)
 
 
 def main():
