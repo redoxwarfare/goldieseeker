@@ -8,5 +8,5 @@ maps = ('sg', 'ss', 'mb', 'lo', 'ap')
 
 for m in maps:
     G = load_graph(m)
-    times = [timeit.timeit('getstrat(G)', setup=s, number=1) for i in range(50)]
+    times = [timeit.timeit('getstrat(G)', setup=s, number=1) for i in range(100)]
     print(f'{m}: {mean(times):0.3f} s, {stdev(times):0.3f} s')
