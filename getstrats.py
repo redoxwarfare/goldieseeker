@@ -116,11 +116,11 @@ def getstrat(G, wide=True, debug=False):
                 # Opening them can neither find the Goldie nor provide additional information about the Goldie
                 if not findable and (adj.issuperset(suspected) or adj.isdisjoint(suspected)):
                     continue
-                opened_new = opened.union(set(V)) if wide else opened
                 A, B = splitgraph(suspected, V, G)
                 printlog(f'{key_str}; check gusher {V}{FLAG if not findable else ""}\n'
                          f'    adj: {tuple(A)}\n'
                          f'    non-adj: {tuple(B)}')
+                opened_new = opened.union(set(V)) if wide else opened
                 high = recurse(A, opened_new, subgraphs)
                 low = recurse(B, opened_new, subgraphs)
                 objH, sizeH = 0, 0
