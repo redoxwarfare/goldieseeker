@@ -2,17 +2,12 @@ import matplotlib.pyplot as plt
 import networkx as nx
 
 from GusherNode import writetree, readtree
-from getstrats import getstrat, getstratgreedy
+from getstrats import getstrat, getstratgreedy, load_graph
 
 import argparse
 import warnings
-from ast import literal_eval as l_eval
 from statistics import mean, pstdev
 
-
-# Special characters for parsing files
-COMMENT_CHAR = '$'
-DEFAULT_CHAR = '.'
 
 # parser for input arguments
 parser = argparse.ArgumentParser(add_help=False)
@@ -21,33 +16,6 @@ parser.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
 parser.add_argument("map_id", nargs='*', help="name(s) of .txt file(s) in gusher graphs folder for map(s) to analyze")
 parser.add_argument("--log", help="print log of search algorithm's internal process", action='store_true')
 parser.add_argument("--plot", help="display gusher graph", action='store_true')
-
-
-def load_graph(mapname):  # TODO - separate gusher map and penalty assignment(s) into 2 files
-    """Create graph from the gusher layout and penalty values specified in external file."""
-    path = f'gusher graphs/{mapname}.txt'
-    G = nx.read_adjlist(path, comments=COMMENT_CHAR)
-
-    # Assign penalties
-    with open(path) as f:
-        # Read the map name from the first line of the file
-        name = f.readline().lstrip(COMMENT_CHAR + ' ')
-        G.graph['name'] = name.rstrip()
-
-        # Read the penalty dictionary from the second line of the file
-        penalties = l_eval(f.readline().lstrip(COMMENT_CHAR + ' '))
-
-        # For each node, check if its name is in any of the penalty groups and assign the corresponding penalty value
-        # If no matches are found, assign the default penalty
-        for node in G.nodes:
-            penalty = penalties[DEFAULT_CHAR]
-            for group in penalties:
-                if node in group:
-                    penalty = penalties[group]
-                    break
-            G.nodes[node]['penalty'] = penalty
-
-    return G
 
 
 def plot_graph(graph):

@@ -1,5 +1,39 @@
+import networkx as nx
+from ast import literal_eval
 from GusherNode import GusherNode, writetree, readtree
 from GusherNode import NEVER_FIND_FLAG as FLAG
+
+
+# Special characters for parsing files
+COMMENT_CHAR = '$'
+DEFAULT_CHAR = '.'
+
+
+def load_graph(mapname):  # TODO - separate gusher map and penalty assignment(s) into 2 files
+    """Create graph from the gusher layout and penalty values specified in external file."""
+    path = f'gusher graphs/{mapname}.txt'
+    G = nx.read_adjlist(path, comments=COMMENT_CHAR)
+
+    # Assign penalties
+    with open(path) as f:
+        # Read the map name from the first line of the file
+        name = f.readline().lstrip(COMMENT_CHAR + ' ')
+        G.graph['name'] = name.rstrip()
+
+        # Read the penalty dictionary from the second line of the file
+        penalties = literal_eval(f.readline().lstrip(COMMENT_CHAR + ' '))
+
+        # For each node, check if its name is in any of the penalty groups and assign the corresponding penalty value
+        # If no matches are found, assign the default penalty
+        for node in G.nodes:
+            penalty = penalties[DEFAULT_CHAR]
+            for group in penalties:
+                if node in group:
+                    penalty = penalties[group]
+                    break
+            G.nodes[node]['penalty'] = penalty
+
+    return G
 
 
 def splitgraph(G, V, G_orig=None):
@@ -132,3 +166,13 @@ def getstrat(G, wide=True, debug=False):
     root = recurse(G, set(), subgraphs)
     root.updatecost()
     return root
+
+
+if __name__ == '__main__':
+    import cProfile
+    from analyze import load_graph
+    sg = load_graph('sg')
+    def profile(n=1):
+        for i in range(n):
+            getstrat(sg)
+    cProfile.run('[profile(10)]', sort='time')
