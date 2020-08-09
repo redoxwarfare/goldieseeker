@@ -85,15 +85,6 @@ def getstrat(G, wide=True, debug=False):
         if debug:
             print(*args, **kwargs)
 
-    def widen(working, excluded, orig_graph):
-        """Widen the working set of vertices to include any vertices adjacent to those in the original set, while
-        excluding the vertices in the excluded set."""
-        widened = set(working)
-        for node in working:
-            widened = widened.union(orig_graph.adj[node])
-        widened = widened.difference(excluded)
-        return widened
-
     subgraphs = dict()
     # dict for associating subgraphs with their corresponding optimal subtrees and objective scores
     # stores optimal subtrees as strings to avoid entangling references between different candidate subtrees
@@ -104,7 +95,8 @@ def getstrat(G, wide=True, debug=False):
         key = (frozenset(suspected), frozenset(opened))
         if key in subgraphs:  # don't recalculate optimal trees for subgraphs we've already solved
             return readtree(subgraphs[key][0], G, obj=subgraphs[key][1])
-        key_str = f'({", ".join(str(u) for u in suspected)} | {", ".join(f"~{o}" for o in opened)})'
+        key_str = '(' + ", ".join(str(u) for u in suspected) + (" | " if wide else "") + \
+                        ", ".join(f"~{o}" for o in opened) + ')'
 
         root = None
         obj = 0
@@ -112,13 +104,18 @@ def getstrat(G, wide=True, debug=False):
         if n == 1:  # Base case
             root = GusherNode(list(suspected.nodes)[0], G)
         elif n > 1:
-            search_set = set(suspected)
-            if wide:
-                search_set = widen(suspected, opened, G)  # also consider gushers adjacent to those in suspected
-
+            if wide:  # Wide strategies consider all unopened gushers
+                search_set = set(G).difference(opened)
+            else:  # Narrow strategies consider only suspected gushers
+                search_set = set(suspected)
             Vcand = dict()  # For each possible root V, store objective score for resulting tree
             for V in search_set:
                 findable = V in suspected
+                adj = set(G.adj[V])
+                # Don't open non-suspected gushers that are adjacent to all/none of the suspected gushers
+                # Opening them can neither find the Goldie nor provide additional information about the Goldie
+                if not findable and (adj.issuperset(suspected) or adj.isdisjoint(suspected)):
+                    continue
                 opened_new = opened.union(set(V)) if wide else opened
                 A, B = splitgraph(suspected, V, G)
                 printlog(f'{key_str}; check gusher {V}{FLAG if not findable else ""}\n'
@@ -161,7 +158,7 @@ def getstrat(G, wide=True, debug=False):
              f"(U | ~O) means gushers in U could have Goldie, gushers in O have already been opened\n"
              f"------------------------------------------------------------------------------------" if wide else
              f"\nNARROW SEARCH\n"
-             f"(U | ) means gushers in U could have Goldie\n"
+             f"(U) means gushers in U could have Goldie\n"
              f"-------------------------------------------")
     root = recurse(G, set(), subgraphs)
     root.updatecost()
