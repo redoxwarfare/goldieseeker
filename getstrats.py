@@ -2,6 +2,7 @@ import networkx as nx
 from ast import literal_eval
 from GusherNode import GusherNode, writetree, readtree
 from GusherNode import NEVER_FIND_FLAG as FLAG
+from copy import deepcopy
 
 
 # Special characters for parsing files
@@ -103,7 +104,7 @@ def getstrat(G, wide=True, debug=False):
         # opened = set of opened gushers
         key = (frozenset(suspected), frozenset(opened))
         if key in subgraphs:  # don't recalculate optimal trees for subgraphs we've already solved
-            return readtree(subgraphs[key][0], G, obj=subgraphs[key][1])
+            return deepcopy(subgraphs[key])
         key_str = f'({", ".join(str(u) for u in suspected)} | {", ".join(f"~{o}" for o in opened)})'
 
         root = None
@@ -150,10 +151,10 @@ def getstrat(G, wide=True, debug=False):
         if root:
             root.obj = obj  # Don't need calc_tree_obj since calculations are done as part of tree-finding process
             if root.high or root.low:  # Only store solutions for subgraphs of size 2 or more
-                solution = writetree(root)
-                subgraphs[key] = (solution, root.obj)
-                printlog(f'subgraph {len(subgraphs):4d}: {key_str}\n'
-                         f'     solution: {solution}\n'
+                solution = deepcopy(root)
+                subgraphs[key] = solution
+                printlog(f'subgraph #{len(subgraphs):4d}: {key_str}\n'
+                         f'     solution: {writetree(root)}\n'
                          f'        score: {root.obj}\n')
         return root
 
