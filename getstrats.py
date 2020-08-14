@@ -1,5 +1,6 @@
 import networkx as nx
 from ast import literal_eval
+from numpy import genfromtxt
 from GusherNode import GusherNode, writetree
 from GusherNode import NEVER_FIND_FLAG
 from copy import deepcopy
@@ -8,6 +9,12 @@ from copy import deepcopy
 # Special characters for parsing files
 COMMENT_CHAR = '$'
 DEFAULT_CHAR = '.'
+BASKET_LABEL = '@'
+
+
+# Function for converting node labels from numbers to letters
+def nums_to_alpha(size):
+    return lambda i: 'abcdefghijklmnopqrstuvwxyz'[i] if i < size else BASKET_LABEL
 
 
 def flag(findable):
@@ -17,31 +24,35 @@ def flag(findable):
         return NEVER_FIND_FLAG
 
 
-def load_graph(mapname):  # TODO - separate gusher map and penalty assignment(s) into 2 files
-    """Create graph from the gusher layout and penalty values specified in external file."""
-    path = f'gusher graphs/{mapname}.txt'
-    graph = nx.read_adjlist(path, comments=COMMENT_CHAR)
+def load_graph(mapname):
+    """Create connections graph from the gusher layout and penalty values specified in mapname/connections.txt, and
+    create distances weighted digraph from the adjacency matrix specified in mapname/distances.txt."""
+    connections_path = f'gusher graphs/{mapname}/connections.txt'
+    distances_path = f'gusher graphs/{mapname}/distances.txt'
 
+    connections = nx.read_adjlist(connections_path, comments=COMMENT_CHAR)
     # Assign penalties
-    with open(path) as f:
+    with open(connections_path) as f:
         # Read the map name from the first line of the file
         name = f.readline().lstrip(COMMENT_CHAR + ' ')
-        graph.graph['name'] = name.rstrip()
+        connections.graph['name'] = name.rstrip()
 
         # Read the penalty dictionary from the second line of the file
         penalties = literal_eval(f.readline().lstrip(COMMENT_CHAR + ' '))
 
         # For each node, check if its name is in any of the penalty groups and assign the corresponding penalty value
         # If no matches are found, assign the default penalty
-        for node in graph.nodes:
+        for node in connections.nodes:
             penalty = penalties[DEFAULT_CHAR]
             for group in penalties:
                 if node in group:
                     penalty = penalties[group]
                     break
-            graph.nodes[node]['penalty'] = penalty
+            connections.nodes[node]['penalty'] = penalty
 
-    return graph
+    distances_raw = genfromtxt(distances_path, delimiter=', ', comments=COMMENT_CHAR)
+    distances = nx.from_numpy_array(distances_raw[:, 1:], create_using=nx.DiGraph)
+    return connections, distances
 
 
 def splitgraph(graph, vertex, adj=None):
@@ -83,14 +94,18 @@ def getstratgreedy(suspected):
     return root
 
 
-def getstrat(graph, wide=True, debug=False):
+def getstrat(connections, distances=None, wide=True, debug=False):
     """Build the optimal decision tree for a gusher graph. Memoized algorithm.
     "Wide" trees may contain nodes where the Goldie can never be found ("unfindable" nodes), which are marked with *.
     "Narrow" trees contain only findable nodes."""
-
     def printlog(*args, **kwargs):
         if debug:
             print(*args, **kwargs)
+
+    if not distances:
+        distances = nx.complete_graph(len(connections)+1)
+        nx.relabel_nodes(distances, nums_to_alpha(len(connections)), copy=False)
+        nx.set_edge_attributes(distances, 1, name='distance')
 
     subgraphs = dict()
     # dict for associating subgraphs with their corresponding optimal subtrees and objective scores
@@ -108,16 +123,16 @@ def getstrat(graph, wide=True, debug=False):
         obj = 0
         n = len(suspected)
         if n == 1:  # Base case
-            root = GusherNode(list(suspected.nodes)[0], graph)
+            root = GusherNode(list(suspected.nodes)[0], connections)
         elif n > 1:
             if wide:  # Wide strategies consider all unopened gushers
-                search_set = set(graph).difference(opened)
+                search_set = set(connections).difference(opened)
             else:  # Narrow strategies consider only suspected gushers
                 search_set = set(suspected)
             candidates = dict()  # For each possible root vertex, store objective score for resulting tree
             for vertex in search_set:
                 findable = vertex in suspected
-                adj = set(graph.adj[vertex])
+                adj = set(connections.adj[vertex])
                 # Don't open non-suspected gushers that are adjacent to all/none of the suspected gushers
                 # Opening them can neither find the Goldie nor provide additional information about the Goldie
                 if not findable and (adj.issuperset(suspected) or adj.isdisjoint(suspected)):
@@ -135,7 +150,7 @@ def getstrat(graph, wide=True, debug=False):
                     obj_h, size_h = high.obj, high.size
                 if low:
                     obj_l, size_l = low.obj, low.size
-                vertex_penalty = graph.nodes[vertex]['penalty']
+                vertex_penalty = connections.nodes[vertex]['penalty']
                 cand_obj = (size_h + size_l)*vertex_penalty + obj_h + obj_l
                 candidates[vertex] = (cand_obj, high, low, findable)
 
@@ -146,7 +161,7 @@ def getstrat(graph, wide=True, debug=False):
             obj, high, low, findable = candidates[vertex]
 
             # Build tree
-            root = GusherNode(vertex, graph, findable=findable)
+            root = GusherNode(vertex, connections, findable=findable)
             root.addchildren(high, low)
             printlog(f'    choose gusher {root}')
 
@@ -166,14 +181,14 @@ def getstrat(graph, wide=True, debug=False):
              f"\nNARROW SEARCH\n"
              f"(U) means gushers in U could have Goldie\n"
              f"-------------------------------------------")
-    root = recurse(graph, set(), subgraphs)
+    root = recurse(connections, set(), subgraphs)
     root.updatecost()
     return root
 
 
 if __name__ == '__main__':
     import cProfile
-    G = load_graph('sg')
+    G, _ = load_graph('lo')
 
     def profile(n=1):
         for i in range(n):

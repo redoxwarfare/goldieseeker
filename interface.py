@@ -28,18 +28,23 @@ def plot_graph(graph):
     plt.show()
 
 
+maps = {mapname: load_graph(mapname) for mapname in ['sg', 'ss', 'mb', 'lo', 'ap']}
+
 # TODO - start compilation of strategy variants for each map
 recstrats = {'sg': 'f(e(d(c,),), h(g(a,), i(b,)))',
              'ap': 'f(g(e, c(d,)), g*(a, b))',
              'ss': 'f(d(b, g), e(c, a))',
              'mb': 'b(c(d(a,), e), c*(f, h(g,)))',
              'lo': 'g(h(i,), d(f(e,), a(c(b,),)))'}
-mbhybrid = readtree('b(e(d, c(a,)), c*(f, h(g,)))', load_graph('mb'))
-lostaysee = readtree('h(f(e, g(i,)), f*(d, a(c(b,),)))', load_graph('lo'))
+mbhybrid = readtree('b(e(d, c(a,)), c*(f, h(g,)))', maps['mb'])
+lostaysee = readtree('h(f(e, g(i,)), f*(d, a(c(b,),)))', maps['lo'])
 
 
 def report(map_id, log=False, plot=False):
-    graph = load_graph(map_id)
+    if map_id in maps:
+        graph = maps[map_id]
+    else:
+        graph = load_graph(map_id)
     print(f'\nMap: {graph.graph["name"]}')
 
     if map_id in recstrats:

@@ -1,0 +1,11 @@
+$ row: gusher you are coming from, column: gusher you are going to, number: how long it takes
+$ @ represents basket
+   a, b, c, d, e, f, g, @
+a, 0,  ,  ,  ,  ,  ,  , 0
+b,  , 0,  ,  ,  ,  ,  , 0
+c,  ,  , 0,  ,  ,  ,  , 0
+d,  ,  ,  , 0,  ,  ,  , 0
+e,  ,  ,  ,  , 0,  ,  , 0
+f,  ,  ,  ,  ,  , 0,  , 0
+g,  ,  ,  ,  ,  ,  , 0, 0
+@,  ,  ,  ,  ,  ,  ,  , 0
