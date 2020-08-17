@@ -3,8 +3,9 @@ from pyparsing import Regex, Forward, Suppress, Optional, Group
 NEVER_FIND_FLAG = '*'
 
 
+# TODO - try implementing threaded binary tree to improve performance?
 class GusherNode:
-    def __init__(self, name, graph=None, penalty=1, findable=True):  # graph is a networkx graph
+    def __init__(self, name, connections=None, penalty=1, findable=True):  # graph is a networkx graph
         self.name = name
         self.low = None  # next gusher to open if this gusher is low
         self.high = None  # next gusher to open if this gusher is high
@@ -12,11 +13,13 @@ class GusherNode:
         self.findable = findable  # whether it is possible to find the Goldie at this gusher
         # if findable is False, the gusher is being opened solely for information (e.g. gusher C on Marooner's Bay)
         # non-findable nodes still count towards their children's costs, but don't count towards tree's objective score
-        self.size = 1 if findable else 0  # number of findable nodes in subtree rooted at this node
-        if graph:
-            self.penalty = graph.nodes[name]['penalty']  # penalty for opening this gusher
+        if connections:
+            self.penalty = connections.nodes[name]['penalty']  # penalty multiplier for this gusher
         else:
             self.penalty = penalty
+        self.distance = 0  # distance from parent gusher
+        self.size = 1 if findable else 0  # number of findable nodes in subtree rooted at this node
+        self.total_path_length = 0  # sum of lengths of each path between this node and one of its findable descendants
         self.cost = 0  # if Goldie is in this gusher, total penalty incurred by following decision tree
         self.obj = 0  # objective function evaluated on subtree with this node as root
 
@@ -55,36 +58,48 @@ class GusherNode:
             samelow = not other.low
         return samehigh and samelow
 
-    def addchildren(self, high, low, n=0):
-        obj_l, obj_h = 0, 0
-        size_l, size_h = 0, 0
-        if low:
-            assert not self.low, f'gusher {self} already has low child {self.low}'
-            assert not low.parent, f'gusher {low} already has parent {low.parent}'
-            self.low = low
-            self.low.parent = self
-            obj_l = self.low.obj
-            size_l = self.low.size
+    def add_children(self, high, low, dist_h=1, dist_l=1):
+        size_h, size_l = 0, 0
+        totpath_h, totpath_l = 0, 0
+        obj_h, obj_l = 0, 0
         if high:
             assert not self.high, f'gusher {self} already has high child {self.high}'
             assert not high.parent, f'gusher {high} already has parent {high.parent}'
             self.high = high
             self.high.parent = self
-            obj_h = self.high.obj
+            self.high.distance = dist_h
             size_h = self.high.size
-        if n:
-            self.obj = self.penalty * (n - 1) + obj_l + obj_h
-        self.size = size_l+size_h+(1 if self.findable else 0)
+            totpath_h = self.high.total_path_length
+            obj_h = self.high.obj
+        if low:
+            assert not self.low, f'gusher {self} already has low child {self.low}'
+            assert not low.parent, f'gusher {low} already has parent {low.parent}'
+            self.low = low
+            self.low.parent = self
+            self.low.distance = dist_l
+            size_l = self.low.size
+            totpath_l = self.low.total_path_length
+            obj_l = self.low.obj
+        self.size = size_l + size_h + (1 if self.findable else 0)
+        self.total_path_length = totpath_l + dist_l*size_l + totpath_h + dist_h*size_h
+        self.obj = obj_l + obj_h + self.penalty*self.total_path_length
 
-    def updatecost(self):
-        """Update costs of node and its children."""
-        for node in self:
+    def update_costs(self):
+        """Update costs of this node's descendants. Should be called on root of tree."""
+        def recurse(node, predecessor_penalties):
             if node.parent:
-                node.cost = node.parent.cost + node.parent.penalty
+                node.cost = node.parent.cost + predecessor_penalties*node.distance
+            else:
+                node.cost = 0
+            if node.high:
+                recurse(node.high, predecessor_penalties + node.penalty)
+            if node.low:
+                recurse(node.low, predecessor_penalties + node.penalty)
+        recurse(self, 0)
 
     def calc_tree_obj(self):
         """Calculate and store the objective score of the tree rooted at this node."""
-        self.updatecost()
+        self.update_costs()
         self.obj = sum(node.cost for node in self if node.findable)
 
     def validate(self):
@@ -133,7 +148,7 @@ subtrees = LPAREN + subtree.setResultsName('high') + COMMA + subtree.setResultsN
 tree << node.setResultsName('root') + Optional(subtrees)
 
 
-def readtree(tree_str, graph, obj=0):
+def readtree(tree_str, connections, distances=None, obj=0):
     """Read the strategy encoded in tree_str and build the corresponding decision tree.
     V(H, L) represents the tree with root node V, high subtree H, and low subtree L.
     A node name followed by * indicates that the gusher is being opened solely for information and the Goldie will
@@ -141,15 +156,20 @@ def readtree(tree_str, graph, obj=0):
 
     def buildtree(tokens):  # recursively convert ParseResults object into GusherNode tree
         findable = tokens.root[-1] is not NEVER_FIND_FLAG
-        root = GusherNode(tokens.root.rstrip(NEVER_FIND_FLAG), graph=graph, findable=findable)
+        rootname = tokens.root.rstrip(NEVER_FIND_FLAG)
+        root = GusherNode(rootname, connections=connections, findable=findable)
         if tokens.high or tokens.low:
-            high = None
-            low = None
+            high, low = None, None
+            dist_h, dist_l = 1, 1
             if tokens.high:
                 high = buildtree(tokens.high)
+                if distances:
+                    dist_h = distances[rootname][high.name]['weight']
             if tokens.low:
                 low = buildtree(tokens.low)
-            root.addchildren(high=high, low=low)
+                if distances:
+                    dist_l = distances[rootname][low.name]['weight']
+            root.add_children(high=high, low=low, dist_h=dist_h, dist_l=dist_l)
         return root
 
     tokens = tree.parseString(tree_str)

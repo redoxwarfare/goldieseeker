@@ -52,6 +52,9 @@ def load_graph(mapname):
 
     distances_raw = genfromtxt(distances_path, delimiter=', ', comments=COMMENT_CHAR)
     distances = nx.from_numpy_array(distances_raw[:, 1:], create_using=nx.DiGraph)
+    assert len(distances) == len(connections) + 1, \
+        f'distances matrix is {len(distances)}x{len(distances)} but connections graph has {len(connections)} vertices'
+    nx.relabel_nodes(distances, nums_to_alpha(len(connections)), False)
     return connections, distances
 
 
@@ -76,7 +79,7 @@ def getstratgreedy(suspected):
     if n == 0:
         return None
     if n == 1:
-        return GusherNode(list(suspected.nodes)[0], graph=suspected)
+        return GusherNode(list(suspected.nodes)[0], connections=suspected)
 
     # Choose vertex V w/ lowest penalty and degree closest to n/2
     minpenalty = min([suspected.nodes[g]['penalty'] for g in suspected])
@@ -89,8 +92,8 @@ def getstratgreedy(suspected):
     low = getstratgreedy(suspect_if_low)
 
     # Construct optimal tree
-    root = GusherNode(vertex, graph=suspected)
-    root.addchildren(high, low, n)
+    root = GusherNode(vertex, connections=suspected)
+    root.add_children(high, low)
     return root
 
 
@@ -102,10 +105,10 @@ def getstrat(connections, distances=None, wide=True, debug=False):
         if debug:
             print(*args, **kwargs)
 
-    if not distances:
-        distances = nx.complete_graph(len(connections)+1)
-        nx.relabel_nodes(distances, nums_to_alpha(len(connections)), copy=False)
-        nx.set_edge_attributes(distances, 1, name='distance')
+    # if not distances:
+    #     distances = nx.complete_graph(len(connections)+1)
+    #     nx.relabel_nodes(distances, nums_to_alpha(len(connections)), copy=False)
+    #     nx.set_edge_attributes(distances, 1, name='distance')
 
     subgraphs = dict()
     # dict for associating subgraphs with their corresponding optimal subtrees and objective scores
@@ -133,10 +136,10 @@ def getstrat(connections, distances=None, wide=True, debug=False):
             for vertex in search_set:
                 findable = vertex in suspected
                 adj = set(connections.adj[vertex])
-                # Don't open non-suspected gushers that are adjacent to all/none of the suspected gushers
-                # Opening them can neither find the Goldie nor provide additional information about the Goldie
                 if not findable and (adj.issuperset(suspected) or adj.isdisjoint(suspected)):
                     continue
+                    # Don't open non-suspected gushers that are adjacent to all/none of the suspected gushers
+                    # Opening them can neither find the Goldie nor provide additional information about the Goldie
                 suspect_if_high, suspect_if_low = splitgraph(suspected, vertex, adj)
                 printlog(f'{key_str}; check gusher {vertex}{flag(findable)}\n'
                          f'    adj: {tuple(suspect_if_high)}\n'
@@ -144,14 +147,18 @@ def getstrat(connections, distances=None, wide=True, debug=False):
                 opened_new = opened.union(set(vertex)) if wide else opened
                 high = recurse(suspect_if_high, opened_new, subgraphs)
                 low = recurse(suspect_if_low, opened_new, subgraphs)
-                obj_h, size_h = 0, 0
-                obj_l, size_l = 0, 0
+                size_h, dist_h, totpath_h, obj_h = 0, 1, 0, 0
+                size_l, dist_l, totpath_l, obj_l = 0, 1, 0, 0
                 if high:
-                    obj_h, size_h = high.obj, high.size
+                    size_h, totpath_h, obj_h = high.size, high.total_path_length, high.obj
+                    if distances:
+                        dist_h = distances[vertex][high.name]['weight']
                 if low:
-                    obj_l, size_l = low.obj, low.size
+                    size_l, totpath_l, obj_l = low.size, low.total_path_length, low.obj
+                    if distances:
+                        dist_l = distances[vertex][low.name]['weight']
                 vertex_penalty = connections.nodes[vertex]['penalty']
-                cand_obj = (size_h + size_l)*vertex_penalty + obj_h + obj_l
+                cand_obj = obj_h + obj_l + vertex_penalty*(totpath_h + totpath_l + dist_h*size_h + dist_l*size_l)
                 candidates[vertex] = (cand_obj, high, low, findable)
 
             printlog(f'{key_str}; options: \n' +
@@ -162,7 +169,7 @@ def getstrat(connections, distances=None, wide=True, debug=False):
 
             # Build tree
             root = GusherNode(vertex, connections, findable=findable)
-            root.addchildren(high, low)
+            root.add_children(high, low)
             printlog(f'    choose gusher {root}')
 
         if root:
@@ -182,16 +189,21 @@ def getstrat(connections, distances=None, wide=True, debug=False):
              f"(U) means gushers in U could have Goldie\n"
              f"-------------------------------------------")
     root = recurse(connections, set(), subgraphs)
-    root.updatecost()
+    root.update_costs()
     return root
 
 
 if __name__ == '__main__':
     import cProfile
-    G, _ = load_graph('lo')
+    G, dist = load_graph('lo')
+
+    strat = getstrat(G, debug=True)
+    strat2 = getstrat(G, dist, debug=True)
+    print(f'equal travel time: {writetree(strat)}\n    { {node.name: node.cost for node in strat} }')
+    print(f'unequal travel time: {writetree(strat2)} \n    { {node.name: node.cost for node in strat2} }')
 
     def profile(n=1):
         for i in range(n):
-            getstrat(G)
+            getstrat(G, dist)
 
     cProfile.run('[profile(10)]', sort='cumulative')
