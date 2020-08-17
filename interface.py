@@ -36,8 +36,8 @@ recstrats = {'sg': 'f(e(d(c,),), h(g(a,), i(b,)))',
              'ss': 'f(d(b, g), e(c, a))',
              'mb': 'b(c(d(a,), e), c*(f, h(g,)))',
              'lo': 'g(h(i,), d(f(e,), a(c(b,),)))'}
-mbhybrid = readtree('b(e(d, c(a,)), c*(f, h(g,)))', maps['mb'])
-lostaysee = readtree('h(f(e, g(i,)), f*(d, a(c(b,),)))', maps['lo'])
+mbhybrid = readtree('b(e(d, c(a,)), c*(f, h(g,)))', *maps['mb'])
+lostaysee = readtree('h(f(e, g(i,)), f*(d, a(c(b,),)))', *maps['lo'])
 
 
 def report(map_id, log=False, plot=False):
@@ -45,15 +45,17 @@ def report(map_id, log=False, plot=False):
         graph = maps[map_id]
     else:
         graph = load_graph(map_id)
-    print(f'\nMap: {graph.graph["name"]}')
+    print(f'\nMap: {graph[0].graph["name"]}')
 
     if map_id in recstrats:
-        recstrat = readtree(recstrats[map_id], graph)
+        recstrat = readtree(recstrats[map_id], *graph)
+        recstrat.calc_tree_obj(graph[1])
     else:
         recstrat = None
-    greedystrat = getstratgreedy(graph)
-    narrowstrat = getstrat(graph, wide=False, debug=log)
-    optstrat = getstrat(graph, debug=log)
+    greedystrat = getstratgreedy(graph[0])
+    greedystrat.calc_tree_obj(graph[1])
+    narrowstrat = getstrat(*graph, wide=False, debug=log)
+    optstrat = getstrat(*graph, debug=log)
 
     strats = {"greedy": greedystrat,
               "narrow": narrowstrat,
@@ -66,7 +68,7 @@ def report(map_id, log=False, plot=False):
                 strat.validate()
             except AssertionError as e:
                 print(f'validate() failed for {desc} strat with error "{e}"')
-            strat.updatecost()
+            strat.update_costs()
             costs = {str(g): g.cost for g in strat if g.findable}
             print(f'{desc} strat: {writetree(strat)}\n'
                   f'    objective score: {strat.obj}\n'
@@ -77,7 +79,7 @@ def report(map_id, log=False, plot=False):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             print('(may need to close graph plot to continue)')
-            plot_graph(graph)
+            plot_graph(graph[0])
 
 
 def main():

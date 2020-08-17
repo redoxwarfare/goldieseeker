@@ -17,7 +17,7 @@ class GusherNode:
             self.penalty = connections.nodes[name]['penalty']  # penalty multiplier for this gusher
         else:
             self.penalty = penalty
-        self.distance = 0  # distance from parent gusher
+        self.distance = 1  # distance from parent gusher
         self.size = 1 if findable else 0  # number of findable nodes in subtree rooted at this node
         self.total_path_length = 0  # sum of lengths of each path between this node and one of its findable descendants
         self.cost = 0  # if Goldie is in this gusher, total penalty incurred by following decision tree
@@ -84,7 +84,7 @@ class GusherNode:
         self.total_path_length = totpath_l + dist_l*size_l + totpath_h + dist_h*size_h
         self.obj = obj_l + obj_h + self.penalty*self.total_path_length
 
-    def update_costs(self):
+    def update_costs(self, distances=None):  # TODO - also update distances if distances graph is provided
         """Update costs of this node's descendants. Should be called on root of tree."""
         def recurse(node, predecessor_penalties):
             if node.parent:
@@ -92,14 +92,18 @@ class GusherNode:
             else:
                 node.cost = 0
             if node.high:
+                if distances:
+                    node.high.distance = distances[node.name][node.high.name]['weight']
                 recurse(node.high, predecessor_penalties + node.penalty)
             if node.low:
+                if distances:
+                    node.low.distance = distances[node.name][node.low.name]['weight']
                 recurse(node.low, predecessor_penalties + node.penalty)
         recurse(self, 0)
 
-    def calc_tree_obj(self):
+    def calc_tree_obj(self, distances=None):
         """Calculate and store the objective score of the tree rooted at this node."""
-        self.update_costs()
+        self.update_costs(distances=distances)
         self.obj = sum(node.cost for node in self if node.findable)
 
     def validate(self):
@@ -177,5 +181,5 @@ def readtree(tree_str, connections, distances=None, obj=0):
     if obj:
         root.obj = obj
     else:
-        root.calc_tree_obj()
+        root.calc_tree_obj(distances)
     return root

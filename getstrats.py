@@ -1,7 +1,7 @@
 import networkx as nx
 from ast import literal_eval
 from numpy import genfromtxt
-from GusherNode import GusherNode, writetree
+from GusherNode import GusherNode, writetree, readtree
 from GusherNode import NEVER_FIND_FLAG
 from copy import deepcopy
 
@@ -50,11 +50,15 @@ def load_graph(mapname):
                     break
             connections.nodes[node]['penalty'] = penalty
 
-    distances_raw = genfromtxt(distances_path, delimiter=', ', comments=COMMENT_CHAR)
-    distances = nx.from_numpy_array(distances_raw[:, 1:], create_using=nx.DiGraph)
-    assert len(distances) == len(connections) + 1, \
-        f'distances matrix is {len(distances)}x{len(distances)} but connections graph has {len(connections)} vertices'
-    nx.relabel_nodes(distances, nums_to_alpha(len(connections)), False)
+    try:
+        distances_raw = genfromtxt(distances_path, delimiter=', ', comments=COMMENT_CHAR)
+        distances = nx.from_numpy_array(distances_raw[:, 1:], create_using=nx.DiGraph)
+        assert len(distances) == len(connections) + 1, \
+            f'distances matrix is {len(distances)}x{len(distances)} but connections graph has {len(connections)} vertices'
+        # noinspection PyTypeChecker
+        nx.relabel_nodes(distances, nums_to_alpha(len(connections)), False)
+    except:
+        distances = None
     return connections, distances
 
 
@@ -114,12 +118,12 @@ def getstrat(connections, distances=None, wide=True, debug=False):
     # dict for associating subgraphs with their corresponding optimal subtrees and objective scores
     # stores optimal subtrees as strings to avoid entangling references between different candidate subtrees
 
-    def recurse(suspected, opened, subgraphs):
+    def recurse(suspected, opened, solved):
         # suspected = subgraph of unopened gushers that might have the Goldie
         # opened = set of opened gushers
         key = (frozenset(suspected), frozenset(opened))
-        if key in subgraphs:  # don't recalculate optimal trees for subgraphs we've already solved
-            return deepcopy(subgraphs[key])
+        if key in solved:  # don't recalculate optimal trees for subgraphs we've already solved
+            return deepcopy(solved[key])
         key_str = f'({", ".join(str(u) for u in suspected)}{" | " if wide else ""}{", ".join(f"~{o}" for o in opened)})'
 
         root = None
@@ -145,8 +149,8 @@ def getstrat(connections, distances=None, wide=True, debug=False):
                          f'    adj: {tuple(suspect_if_high)}\n'
                          f'    non-adj: {tuple(suspect_if_low)}')
                 opened_new = opened.union(set(vertex)) if wide else opened
-                high = recurse(suspect_if_high, opened_new, subgraphs)
-                low = recurse(suspect_if_low, opened_new, subgraphs)
+                high = recurse(suspect_if_high, opened_new, solved)
+                low = recurse(suspect_if_low, opened_new, solved)
                 size_h, dist_h, totpath_h, obj_h = 0, 1, 0, 0
                 size_l, dist_l, totpath_l, obj_l = 0, 1, 0, 0
                 if high:
@@ -176,8 +180,8 @@ def getstrat(connections, distances=None, wide=True, debug=False):
             root.obj = obj  # Don't need calc_tree_obj since calculations are done as part of tree-finding process
             if root.high or root.low:  # Only store solutions for subgraphs of size 2 or more
                 solution = deepcopy(root)
-                subgraphs[key] = solution
-                printlog(f'subgraph #{len(subgraphs):4d}: {key_str}\n'
+                solved[key] = solution
+                printlog(f'subgraph #{len(solved):4d}: {key_str}\n'
                          f'     solution: {writetree(root)}\n'
                          f'        score: {root.obj}\n')
         return root
@@ -197,10 +201,18 @@ if __name__ == '__main__':
     import cProfile
     G, dist = load_graph('lo')
 
+    greedy = getstratgreedy(G)
+    greedy.calc_tree_obj(dist)
     strat = getstrat(G, debug=True)
+    strat.calc_tree_obj(dist)
     strat2 = getstrat(G, dist, debug=True)
-    print(f'equal travel time: {writetree(strat)}\n    { {node.name: node.cost for node in strat} }')
-    print(f'unequal travel time: {writetree(strat2)} \n    { {node.name: node.cost for node in strat2} }')
+    lo_fh = readtree('f(d(e, h), h*(g(i,), a(c(b,),)))', G, dist)
+    lo_min = readtree('h(e(f(,i), g), a(c(b,), d))', G, dist)
+    print(f'greedy ({greedy.obj}): {writetree(greedy)}\n    { {node.name: node.cost for node in greedy} }')
+    print(f'w/o distances ({strat.obj}): {writetree(strat)}\n    { {node.name: node.cost for node in strat} }')
+    print(f'w/ distances ({strat2.obj}): {writetree(strat2)} \n    { {node.name: node.cost for node in strat2} }')
+    print(f'FH ({lo_fh.obj}): {writetree(lo_fh)} \n    { {node.name: node.cost for node in lo_fh} }')
+    print(f'min ({lo_min.obj}): {writetree(lo_min)} \n    { {node.name: node.cost for node in lo_min} }')
 
     def profile(n=1):
         for i in range(n):
