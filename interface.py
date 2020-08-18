@@ -16,6 +16,7 @@ parser.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
 parser.add_argument("map_id", nargs='*', help="name(s) of .txt file(s) in gusher graphs folder for map(s) to analyze")
 parser.add_argument("--log", help="print log of search algorithm's internal process", action='store_true')
 parser.add_argument("--plot", help="display gusher graph", action='store_true')
+parser.add_argument("--distance", "--dist", help="take the distance between gushers into account", action="store_true")
 
 
 def plot_graph(graph):
@@ -31,31 +32,36 @@ def plot_graph(graph):
 maps = {mapname: load_graph(mapname) for mapname in ['sg', 'ss', 'mb', 'lo', 'ap']}
 
 # TODO - start compilation of strategy variants for each map
-recstrats = {'sg': 'f(e(d(c,),), h(g(a,), i(b,)))',
+recstrats = {'sg': 'd(g(a(b, c), f(e,)), g*(h, i))',
              'ap': 'f(g(e, c(d,)), g*(a, b))',
              'ss': 'f(d(b, g), e(c, a))',
              'mb': 'b(c(d(a,), e), c*(f, h(g,)))',
-             'lo': 'g(h(i,), d(f(e,), a(c(b,),)))'}
+             'lo': 'h(f(e, g(i,)), f*(d, a(c(b,),)))'}
 mbhybrid = readtree('b(e(d, c(a,)), c*(f, h(g,)))', *maps['mb'])
 lostaysee = readtree('h(f(e, g(i,)), f*(d, a(c(b,),)))', *maps['lo'])
 
 
-def report(map_id, log=False, plot=False):
+def report(map_id, log=False, plot=False, dist=False):
     if map_id in maps:
-        graph = maps[map_id]
+        graphs = maps[map_id]
     else:
-        graph = load_graph(map_id)
-    print(f'\nMap: {graph[0].graph["name"]}')
+        graphs = load_graph(map_id)
+    graph = graphs[0]
+    if dist:
+        distances = graphs[1]
+    else:
+        distances = None
+    print(f'\nMap: {graph.graph["name"]}')
 
     if map_id in recstrats:
-        recstrat = readtree(recstrats[map_id], *graph)
-        recstrat.calc_tree_obj(graph[1])
+        recstrat = readtree(recstrats[map_id], graph, distances)
+        recstrat.calc_tree_obj(distances)
     else:
         recstrat = None
-    greedystrat = getstratgreedy(graph[0])
-    greedystrat.calc_tree_obj(graph[1])
-    narrowstrat = getstrat(*graph, wide=False, debug=log)
-    optstrat = getstrat(*graph, debug=log)
+    greedystrat = getstratgreedy(graph)
+    greedystrat.calc_tree_obj(distances)
+    narrowstrat = getstrat(graph, distances, wide=False, debug=log)
+    optstrat = getstrat(graph, distances, debug=log)
 
     strats = {"greedy": greedystrat,
               "narrow": narrowstrat,
@@ -88,7 +94,7 @@ def main():
     while not stop:
         try:
             for map_id in args.map_id:
-                report(map_id, args.log, args.plot)
+                report(map_id, args.log, args.plot, args.distance)
         except FileNotFoundError as e:
             print(f"Couldn't find {e.filename}!")
 
