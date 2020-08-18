@@ -24,6 +24,7 @@ def flag(findable):
         return NEVER_FIND_FLAG
 
 
+# TODO - separate penalty assignments into their own files
 def load_graph(mapname):
     """Create connections graph from the gusher layout and penalty values specified in mapname/connections.txt, and
     create distances weighted digraph from the adjacency matrix specified in mapname/distances.txt."""
@@ -54,7 +55,8 @@ def load_graph(mapname):
         distances_raw = genfromtxt(distances_path, delimiter=', ', comments=COMMENT_CHAR)
         distances = nx.from_numpy_array(distances_raw[:, 1:], create_using=nx.DiGraph)
         assert len(distances) == len(connections) + 1, \
-            f'distances matrix is {len(distances)}x{len(distances)} but connections graph has {len(connections)} vertices'
+            f'distances matrix is {len(distances)}x{len(distances)} ' + \
+            f'but connections graph has {len(connections)} vertices'
         # noinspection PyTypeChecker
         nx.relabel_nodes(distances, nums_to_alpha(len(connections)), False)
     except:
@@ -101,7 +103,7 @@ def getstratgreedy(suspected):
     return root
 
 
-def getstrat(connections, distances=None, wide=True, debug=False):
+def getstrat(connections, distances=None, wide=True, start=BASKET_LABEL, debug=False):
     """Build the optimal decision tree for a gusher graph. Memoized algorithm.
     "Wide" trees may contain nodes where the Goldie can never be found ("unfindable" nodes), which are marked with *.
     "Narrow" trees contain only findable nodes."""
@@ -109,34 +111,53 @@ def getstrat(connections, distances=None, wide=True, debug=False):
         if debug:
             print(*args, **kwargs)
 
-    # if not distances:
-    #     distances = nx.complete_graph(len(connections)+1)
-    #     nx.relabel_nodes(distances, nums_to_alpha(len(connections)), copy=False)
-    #     nx.set_edge_attributes(distances, 1, name='distance')
+    def penalty(gusher):
+        if gusher != BASKET_LABEL:
+            return connections.nodes[gusher]['penalty']
+        else:
+            return 0
 
-    subgraphs = dict()
-    # dict for associating subgraphs with their corresponding optimal subtrees and objective scores
-    # stores optimal subtrees as strings to avoid entangling references between different candidate subtrees
+    def distance(start, end):
+        if distances:
+            return distances[start][end]['weight']
+        else:
+            return 1
 
-    def recurse(suspected, opened, solved):
+    def score_candidate(candidate, latest_open):
+        return candidate.obj + penalty(latest_open)*(candidate.total_path_length +
+                                                     distance(latest_open, candidate.name))
+
+    solved_subgraphs = dict()
+    # dict that associates a subgraph with its solution subtrees and their objective scores
+    # stores deep copies of trees to avoid entangling references between different candidates
+
+    def recurse(suspected, opened, latest_open, solved):
+        """Return the optimal subtree to follow given a set of suspected gushers, a set of opened gushers,
+        and the most recently opened gusher."""
+        # First 3 arguments refer to gushers using strings, but recurse() returns a GusherNode
         # suspected = subgraph of unopened gushers that might have the Goldie
         # opened = set of opened gushers
-        key = (frozenset(suspected), frozenset(opened))
-        if key in solved:  # don't recalculate optimal trees for subgraphs we've already solved
-            return deepcopy(solved[key])
-        key_str = f'({", ".join(str(u) for u in suspected)}{" | " if wide else ""}{", ".join(f"~{o}" for o in opened)})'
+        # latest_open = most recently opened gusher
 
-        root = None
-        obj = 0
+        # Base cases
         n = len(suspected)
-        if n == 1:  # Base case
-            root = GusherNode(list(suspected.nodes)[0], connections)
-        elif n > 1:
+        if n == 0:
+            return None
+        if n == 1:
+            return GusherNode(list(suspected.nodes)[0], connections)
+
+        candidates = list()
+        key = (frozenset(suspected), frozenset(opened))
+        key_str = f'({", ".join(str(u) for u in suspected)}{" | " if wide else ""}' + \
+                  f'{", ".join(f"~{o}" for o in opened)})'
+        if key in solved:  # Don't recalculate subtrees for subgraphs we've already solved
+            candidates = deepcopy(solved[key])
+        else:
+            # Generate best subtrees for this subgraph
             if wide:  # Wide strategies consider all unopened gushers
                 search_set = set(connections).difference(opened)
             else:  # Narrow strategies consider only suspected gushers
                 search_set = set(suspected)
-            candidates = dict()  # For each possible root vertex, store objective score for resulting tree
             for vertex in search_set:
                 findable = vertex in suspected
                 adj = set(connections.adj[vertex])
@@ -149,41 +170,28 @@ def getstrat(connections, distances=None, wide=True, debug=False):
                          f'    adj: {tuple(suspect_if_high)}\n'
                          f'    non-adj: {tuple(suspect_if_low)}')
                 opened_new = opened.union(set(vertex)) if wide else opened
-                high = recurse(suspect_if_high, opened_new, solved)
-                low = recurse(suspect_if_low, opened_new, solved)
-                size_h, dist_h, totpath_h, obj_h = 0, 1, 0, 0
-                size_l, dist_l, totpath_l, obj_l = 0, 1, 0, 0
-                if high:
-                    size_h, totpath_h, obj_h = high.size, high.total_path_length, high.obj
-                    if distances:
-                        dist_h = distances[vertex][high.name]['weight']
-                if low:
-                    size_l, totpath_l, obj_l = low.size, low.total_path_length, low.obj
-                    if distances:
-                        dist_l = distances[vertex][low.name]['weight']
-                vertex_penalty = connections.nodes[vertex]['penalty']
-                cand_obj = obj_h + obj_l + vertex_penalty*(totpath_h + totpath_l + dist_h*size_h + dist_l*size_l)
-                candidates[vertex] = (cand_obj, high, low, findable)
-
-            printlog(f'{key_str}; options: \n' +
-                     '\n'.join(f'    {V}{flag(t[3])} > ({t[1]}, {t[2]}), score: {t[0]}'
-                               for V, t in candidates.items()))
-            vertex = min(candidates, key=lambda g: candidates[g][0])  # Choose the vertex that minimizes objective score
-            obj, high, low, findable = candidates[vertex]
-
-            # Build tree
-            root = GusherNode(vertex, connections, findable=findable)
-            root.add_children(high, low)
-            printlog(f'    choose gusher {root}')
-
-        if root:
-            root.obj = obj  # Don't need calc_tree_obj since calculations are done as part of tree-finding process
-            if root.high or root.low:  # Only store solutions for subgraphs of size 2 or more
-                solution = deepcopy(root)
-                solved[key] = solution
+                high = recurse(suspect_if_high, opened_new, vertex, solved)
+                low = recurse(suspect_if_low, opened_new, vertex, solved)
+                dist_h, dist_l = 1, 1
+                if distances:
+                    if high:
+                        dist_h = distance(vertex, high.name)
+                    if low:
+                        dist_l = distance(vertex, low.name)
+                root = GusherNode(vertex, connections, findable=findable)
+                root.add_children(high, low, dist_h, dist_l)
+                candidates.append(root)
                 printlog(f'subgraph #{len(solved):4d}: {key_str}\n'
-                         f'     solution: {writetree(root)}\n'
-                         f'        score: {root.obj}\n')
+                         f'    candidate solution: {writetree(root)}\n'
+                         f'    score: {root.obj}\n')
+            solved[key] = deepcopy(candidates)
+
+        root = min(candidates, key=lambda cand: score_candidate(cand, latest_open))
+        printlog(f'{key_str}; options: \n' +
+                 '\n'.join(f'    {tree} > ({tree.high}, {tree.low}), ' +
+                           f'score: {tree.obj}, {latest_open}-{tree.name} distance: {distance(latest_open, tree.name)}'
+                           for tree in candidates) +
+                 f'\n    choose gusher {root}')
         return root
 
     printlog(f"\nWIDE SEARCH\n"
@@ -192,8 +200,8 @@ def getstrat(connections, distances=None, wide=True, debug=False):
              f"\nNARROW SEARCH\n"
              f"(U) means gushers in U could have Goldie\n"
              f"-------------------------------------------")
-    root = recurse(connections, set(), subgraphs)
-    root.update_costs()
+    root = recurse(connections, set(), start, solved_subgraphs)
+    root.update_costs(distances)
     return root
 
 

@@ -84,7 +84,7 @@ class GusherNode:
         self.total_path_length = totpath_l + dist_l*size_l + totpath_h + dist_h*size_h
         self.obj = obj_l + obj_h + self.penalty*self.total_path_length
 
-    def update_costs(self, distances=None):  # TODO - also update distances if distances graph is provided
+    def update_costs(self, distances=None):
         """Update costs of this node's descendants. Should be called on root of tree."""
         def recurse(node, predecessor_penalties):
             if node.parent:
@@ -103,7 +103,7 @@ class GusherNode:
 
     def calc_tree_obj(self, distances=None):
         """Calculate and store the objective score of the tree rooted at this node."""
-        self.update_costs(distances=distances)
+        self.update_costs(distances)
         self.obj = sum(node.cost for node in self if node.findable)
 
     def validate(self):
@@ -152,7 +152,7 @@ subtrees = LPAREN + subtree.setResultsName('high') + COMMA + subtree.setResultsN
 tree << node.setResultsName('root') + Optional(subtrees)
 
 
-def readtree(tree_str, connections, distances=None, obj=0):
+def readtree(tree_str, connections, distances=None):
     """Read the strategy encoded in tree_str and build the corresponding decision tree.
     V(H, L) represents the tree with root node V, high subtree H, and low subtree L.
     A node name followed by * indicates that the gusher is being opened solely for information and the Goldie will
@@ -178,8 +178,5 @@ def readtree(tree_str, connections, distances=None, obj=0):
 
     tokens = tree.parseString(tree_str)
     root = buildtree(tokens)
-    if obj:
-        root.obj = obj
-    else:
-        root.calc_tree_obj(distances)
+    root.calc_tree_obj(distances)
     return root
