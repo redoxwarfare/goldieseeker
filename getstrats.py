@@ -59,7 +59,9 @@ def load_graph(mapname):
             f'but connections graph has {len(connections)} vertices'
         # noinspection PyTypeChecker
         nx.relabel_nodes(distances, nums_to_alpha(len(connections)), False)
-    except:
+    except ValueError as e:
+        print(f"Couldn't read distances matrix for map '{mapname}'")
+        print(e)
         distances = None
     return connections, distances
 
@@ -207,20 +209,20 @@ def getstrat(connections, distances=None, wide=True, start=BASKET_LABEL, debug=F
 
 if __name__ == '__main__':
     import cProfile
-    G, dist = load_graph('lo')
+    G, dist = load_graph('mb')
 
     greedy = getstratgreedy(G)
     greedy.calc_tree_obj(dist)
     strat = getstrat(G, debug=True)
     strat.calc_tree_obj(dist)
     strat2 = getstrat(G, dist, debug=True)
-    lo_fh = readtree('f(d(e, h), h*(g(i,), a(c(b,),)))', G, dist)
-    lo_min = readtree('h(e(f(,i), g), a(c(b,), d))', G, dist)
+    # lo_fh = readtree('f(d(e, h), h*(g(i,), a(c(b,),)))', G, dist)
+    # lo_min = readtree('h(e(f(,i), g), a(c(b,), d))', G, dist)
     print(f'greedy ({greedy.obj}): {writetree(greedy)}\n    { {node.name: node.cost for node in greedy} }')
     print(f'w/o distances ({strat.obj}): {writetree(strat)}\n    { {node.name: node.cost for node in strat} }')
     print(f'w/ distances ({strat2.obj}): {writetree(strat2)} \n    { {node.name: node.cost for node in strat2} }')
-    print(f'FH ({lo_fh.obj}): {writetree(lo_fh)} \n    { {node.name: node.cost for node in lo_fh} }')
-    print(f'min ({lo_min.obj}): {writetree(lo_min)} \n    { {node.name: node.cost for node in lo_min} }')
+    # print(f'FH ({lo_fh.obj}): {writetree(lo_fh)} \n    { {node.name: node.cost for node in lo_fh} }')
+    # print(f'min ({lo_min.obj}): {writetree(lo_min)} \n    { {node.name: node.cost for node in lo_min} }')
 
     def profile(n=1):
         for i in range(n):
