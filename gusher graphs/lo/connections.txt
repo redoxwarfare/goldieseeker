@@ -1,5 +1,5 @@
 $ Lost Outpost
-$ {'bei': 2.5, '.': 1}
+$ {'bei': 2.5, 'ad': 0.75, '.': 1}
 a b c
 b c e
 c e
