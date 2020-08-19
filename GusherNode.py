@@ -5,7 +5,7 @@ NEVER_FIND_FLAG = '*'
 
 # TODO - try implementing threaded binary tree to improve performance?
 class GusherNode:
-    def __init__(self, name, connections=None, penalty=1, findable=True):  # graph is a networkx graph
+    def __init__(self, name, connections=None, penalty=1, findable=True):  # connections is a networkx graph
         self.name = name
         self.low = None  # next gusher to open if this gusher is low
         self.high = None  # next gusher to open if this gusher is high

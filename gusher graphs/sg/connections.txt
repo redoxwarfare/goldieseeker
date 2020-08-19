@@ -1,6 +1,5 @@
 $ Spawning Grounds
 $ {'bc': 2.5, '.': 1}
-$ {'bc': 2, 'ad': 1.5, 'efh': 0.75, '.': 1}
 a b d g h
 b c d g i
 c d e f g
