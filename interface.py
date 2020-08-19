@@ -35,7 +35,7 @@ maps = {mapname: load_graph(mapname) for mapname in ['sg', 'ss', 'mb', 'lo', 'ap
 recstrats = {'sg': 'd(g(a(b, c), f(e,)), g*(h, i))',
              'ap': 'f(g(e, c(d,)), g*(a, b))',
              'ss': 'f(d(b, g), e(c, a))',
-             'mb': 'b(c(d(a,), e), c*(f, h(g,)))',
+             'mb': 'c(b(d(a,), f), b*(e, h(g,)))',
              'lo': 'h(f(e, g(i,)), f*(d, a(c(b,),)))'}
 mbhybrid = readtree('b(e(d, c(a,)), c*(f, h(g,)))', *maps['mb'])
 lostaysee = readtree('h(f(e, g(i,)), f*(d, a(c(b,),)))', *maps['lo'])
