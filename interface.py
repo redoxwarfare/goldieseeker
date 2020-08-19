@@ -46,22 +46,19 @@ def report(map_id, log=False, plot=False, dist=False):
         graphs = maps[map_id]
     else:
         graphs = load_graph(map_id)
-    graph = graphs[0]
-    if dist:
-        distances = graphs[1]
-    else:
-        distances = None
-    print(f'\nMap: {graph.graph["name"]}')
+    connections = graphs[0]
+    distances = graphs[1] if dist else None
+    print(f'\nMap: {connections.graph["name"]}')
 
     if map_id in recstrats:
-        recstrat = readtree(recstrats[map_id], graph, distances)
+        recstrat = readtree(recstrats[map_id], connections, distances)
         recstrat.calc_tree_obj(distances)
     else:
         recstrat = None
-    greedystrat = getstratgreedy(graph)
+    greedystrat = getstratgreedy(connections)
     greedystrat.calc_tree_obj(distances)
-    narrowstrat = getstrat(graph, distances, wide=False, debug=log)
-    optstrat = getstrat(graph, distances, debug=log)
+    narrowstrat = getstrat(connections, distances, wide=False, debug=log)
+    optstrat = getstrat(connections, distances, debug=log)
 
     strats = {"greedy": greedystrat,
               "narrow": narrowstrat,
@@ -85,7 +82,7 @@ def report(map_id, log=False, plot=False, dist=False):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             print('(may need to close graph plot to continue)')
-            plot_graph(graph[0])
+            plot_graph(connections)
 
 
 def main():

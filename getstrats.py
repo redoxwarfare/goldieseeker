@@ -115,7 +115,7 @@ def getstrat(connections, distances=None, wide=True, start=BASKET_LABEL, debug=F
         if gusher != BASKET_LABEL:
             return connections.nodes[gusher]['penalty']
         else:
-            return 0
+            return 1
 
     def distance(start, end):
         if distances:
@@ -125,7 +125,7 @@ def getstrat(connections, distances=None, wide=True, start=BASKET_LABEL, debug=F
 
     def score_candidate(candidate, latest_open):
         return candidate.obj + penalty(latest_open)*(candidate.total_path_length +
-                                                     distance(latest_open, candidate.name))
+                                                     distance(latest_open, candidate.name)*candidate.size)
 
     solved_subgraphs = dict()
     # dict that associates a subgraph with its solution subtrees and their objective scores
@@ -181,7 +181,7 @@ def getstrat(connections, distances=None, wide=True, start=BASKET_LABEL, debug=F
                 root = GusherNode(vertex, connections, findable=findable)
                 root.add_children(high, low, dist_h, dist_l)
                 candidates.append(root)
-                printlog(f'subgraph #{len(solved):4d}: {key_str}\n'
+                printlog(f'subgraph: {key_str}\n'
                          f'    candidate solution: {writetree(root)}\n'
                          f'    score: {root.obj}\n')
             solved[key] = deepcopy(candidates)
@@ -191,7 +191,7 @@ def getstrat(connections, distances=None, wide=True, start=BASKET_LABEL, debug=F
                  '\n'.join(f'    {tree} > ({tree.high}, {tree.low}), ' +
                            f'score: {tree.obj}, {latest_open}-{tree.name} distance: {distance(latest_open, tree.name)}'
                            for tree in candidates) +
-                 f'\n    choose gusher {root}')
+                 f'\n    choose gusher {root}: {writetree(root)}')
         return root
 
     printlog(f"\nWIDE SEARCH\n"

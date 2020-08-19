@@ -1,6 +1,6 @@
 $ Lost Outpost
+$ {'bei': 3, 'cfh': 2, '.': 1}
 $ {'bei': 2, '.': 1}
-$ {'bei': 2, 'cfh': 1.5, '.': 1}
 a b c
 b c e
 c e
