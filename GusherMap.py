@@ -32,8 +32,8 @@ class GusherMap:
             nx.relabel_nodes(self.distances, lambda i: f'{BASKET_LABEL}abcdefghijklmnopqrstuvwxyz'[i], False)
             violations = self._violates_triangle_inequality()
             if violations:
-                warnings.warn(f"Distances matrix in '{self._folder}' does not satisfy triangle inequality:\n"
-                              ''.join(f"    {t[0]}-->{t[1]}-->{t[2]} is shorter than {t[0]}-->{t[2]}\n"
+                warnings.warn(f"Distances matrix in '{self._folder}' does not satisfy triangle inequality:\n" +
+                              ''.join(f"    {t[0]}->{t[1]}->{t[2]} ({t[3]}) is shorter than {t[0]}->{t[2]} ({t[4]})\n"
                                       for t in violations))
 
     def _load_connections(self, filename):
@@ -80,8 +80,9 @@ class GusherMap:
             for neighbor in neighborhood:
                 shortest_distance = distance(vertex, neighbor)
                 for other in neighborhood.difference(set(neighbor)):
-                    if distance(vertex, other) + distance(other, neighbor) < shortest_distance:
-                        violations.add((vertex, other, neighbor))
+                    other_distance = distance(vertex, other) + distance(other, neighbor)
+                    if other_distance < shortest_distance:
+                        violations.add((vertex, other, neighbor, other_distance, shortest_distance))
         return violations
 
     def __len__(self):
