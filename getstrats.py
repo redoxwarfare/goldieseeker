@@ -1,6 +1,5 @@
 from GusherMap import GusherMap, split, BASKET_LABEL
-from GusherNode import GusherNode, write_tree
-from GusherNode import NEVER_FIND_FLAG
+from GusherNode import GusherNode, NEVER_FIND_FLAG, write_tree, write_instructions
 from copy import deepcopy
 
 
@@ -140,17 +139,16 @@ def get_strat(gushers, start=BASKET_LABEL, distances=True, weights=True, wide=Tr
 
 if __name__ == '__main__':
     import cProfile
-    G = GusherMap('lo')
+    G = GusherMap('sg')
 
     greedy = get_strat_greedy(G)
     greedy.calc_tree_total_cost(G)
-    strat = get_strat(G, distances=False, debug=True)
+    strat = get_strat(G, debug=True)
     strat.calc_tree_total_cost(G)
-    strat2 = get_strat(G, debug=True)
     print(f'greedy ({greedy.total_risk}): {write_tree(greedy)}\n    { {node.name: node.risk for node in greedy} }')
-    print(f'w/o distances ({strat.total_risk}): {write_tree(strat)}\n    { {node.name: node.risk for node in strat} }')
-    print(f'w/ distances ({strat2.total_risk}): {write_tree(strat2)}\n' +
-          f'    { {node.name: node.risk for node in strat2} }')
+    print(f'optimal ({strat.total_risk}): {write_tree(strat)}\n' +
+          f'    { {node.name: node.risk for node in strat} }')
+    print(write_instructions(strat))
 
     def profile(n=1):
         for i in range(n):

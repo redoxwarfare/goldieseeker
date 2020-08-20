@@ -41,6 +41,9 @@ class GusherMap:
         # If _load_distances failed, generate complete digraph from connections graph
         if not self.distances:
             self.distances = nx.complete_graph(connections_raw.nodes, create_using=nx.DiGraph)
+            edge_list = [(BASKET_LABEL, node) for node in self.distances]
+            self.distances.add_node(BASKET_LABEL)
+            self.distances.add_edges_from(edge_list)
             nx.set_edge_attributes(self.distances, 1, name='weight')
         else:
             conn_size = len(connections_raw)
