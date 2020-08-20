@@ -30,8 +30,11 @@ class GusherMap:
         else:
             # noinspection PyTypeChecker
             nx.relabel_nodes(self.distances, lambda i: f'{BASKET_LABEL}abcdefghijklmnopqrstuvwxyz'[i], False)
-            if not self._satisfies_triangle_inequality():
-                warnings.warn(f"Distances matrix in '{self._folder}' does not satisfy triangle inequality")
+            violations = self._violates_triangle_inequality()
+            if violations:
+                warnings.warn(f"Distances matrix in '{self._folder}' does not satisfy triangle inequality:\n"
+                              ''.join(f"    {t[0]}-->{t[1]}-->{t[2]} is shorter than {t[0]}-->{t[2]}\n"
+                                      for t in violations))
 
     def _load_connections(self, filename):
         # Read the gushers name from the first line of the file
@@ -69,9 +72,17 @@ class GusherMap:
                     break
             self.weights[gusher] = gusher_weight
 
-    # TODO - write function to check whether 'distances' satisfies triangle inequality
-    def _satisfies_triangle_inequality(self):
-        return True
+    def _violates_triangle_inequality(self):
+        distance = lambda start, end: self.distances.adj[start][end]['weight']
+        violations = set()
+        for vertex in self.distances:
+            neighborhood = set(self.distances.adj[vertex])
+            for neighbor in neighborhood:
+                shortest_distance = distance(vertex, neighbor)
+                for other in neighborhood.difference(set(neighbor)):
+                    if distance(vertex, other) + distance(other, neighbor) < shortest_distance:
+                        violations.add((vertex, other, neighbor))
+        return violations
 
     def __len__(self):
         return len(self.connections)

@@ -7,7 +7,6 @@ from pyparsing import Regex, Forward, Suppress, Optional, Group
 NEVER_FIND_FLAG = '*'
 
 
-# TODO - try implementing threaded binary tree to improve performance?
 class GusherNode:
     def __init__(self, name, gusher_map=None, findable=True):
         self.name = name
