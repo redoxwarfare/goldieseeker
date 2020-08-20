@@ -194,3 +194,22 @@ def read_tree(tree_str, gusher_map):
     root = build_tree(tokens)
     root.calc_tree_total_cost(gusher_map)
     return root
+
+
+def write_instructions(tree):
+    """Convert strategy tree into human-readable instructions."""
+    def recurse(subtree, depth):
+        indent = "   "*depth
+        result = ""
+        if depth > 0:
+            result += f"{subtree}\n" + indent
+        if subtree.size > 2 or (subtree.high and subtree.low):
+            result += f"open {subtree}\n"
+            if subtree.high:
+                result += indent + f"{subtree} high --> " + recurse(subtree.high, depth+1)
+            if subtree.low:
+                result += indent + f"{subtree} low --> " + recurse(subtree.low, depth+1)
+        else:
+            result = ', '.join(str(node) for node in subtree) + '\n'
+        return result
+    return recurse(tree, 0)
