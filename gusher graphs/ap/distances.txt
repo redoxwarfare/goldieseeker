@@ -1,5 +1,5 @@
-$ Ruins of Ark Polaris
-   a, b, c, d, e, f, g
+# Ruins of Ark Polaris
+#  a, b, c, d, e, f, g
 a, 0,  ,  ,  ,  ,  ,
 b,  , 0,  ,  ,  ,  ,
 c,  ,  , 0,  ,  ,  ,

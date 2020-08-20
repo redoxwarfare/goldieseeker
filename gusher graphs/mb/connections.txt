@@ -1,5 +1,4 @@
-$ Marooner's Bay
-$ {'a': 3.5, 'd': 2, 'f': 1.5, 'bc': 0.25, '.': 1}
+# Marooner's Bay
 a b c d
 b c d e
 c d f

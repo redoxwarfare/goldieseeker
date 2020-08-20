@@ -1,5 +1,4 @@
-$ Ruins of Ark Polaris
-$ {'a': 3.5, 'e': 3, 'db': 2, '.': 1}
+# Ruins of Ark Polaris
 a b c d e g
 b c d e
 c d e f

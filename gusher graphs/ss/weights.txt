@@ -1,0 +1,2 @@
+# Salmonid Smokeyard
+{'ab': 3, 'c': 2, '.': 1}

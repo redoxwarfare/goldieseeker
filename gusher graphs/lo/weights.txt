@@ -1,0 +1,2 @@
+# Lost Outpost
+{'bei': 2.5, 'cfh': 1.5, '.': 1}

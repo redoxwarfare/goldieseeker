@@ -24,9 +24,10 @@ def flag(findable):
         return NEVER_FIND_FLAG
 
 
+# TODO - create separate GusherMap class to encapsulate connections, distances, and penalties
 # TODO - separate penalty assignments into their own files
 def load_graph(mapname):
-    """Create connections graph from the gusher layout and penalty values specified in mapname/connections.txt, and
+    """Create connections graph from the gusher layout and weight values specified in mapname/connections.txt, and
     create distances weighted digraph from the adjacency matrix specified in mapname/distances.txt."""
     connections_path = f'gusher graphs/{mapname}/connections.txt'
     distances_path = f'gusher graphs/{mapname}/distances.txt'
@@ -49,7 +50,7 @@ def load_graph(mapname):
                 if node in group:
                     penalty = penalties[group]
                     break
-            connections.nodes[node]['penalty'] = penalty
+            connections.nodes[node]['weight'] = penalty
 
     try:
         distances_raw = genfromtxt(distances_path, delimiter=', ', comments=COMMENT_CHAR)
@@ -79,30 +80,32 @@ def splitgraph(graph, vertex, adj=None):
     return adj_subgraph, nonadj_subgraph
 
 
-def getstratgreedy(suspected):
-    """Build a decision tree for the gusher graph. Greedy algorithm not guaranteed to find the optimal tree,
+def getstratgreedy(gusher_map):
+    """Build a decision tree for the gusher map. Greedy algorithm not guaranteed to find the optimal tree,
     but should still return something decent."""
-    n = len(suspected)
-    # Base cases
-    if n == 0:
-        return None
-    if n == 1:
-        return GusherNode(list(suspected.nodes)[0], connections=suspected)
+    def recurse(suspected):
+        n = len(suspected)
+        # Base cases
+        if n == 0:
+            return None
+        if n == 1:
+            return GusherNode(list(suspected.nodes)[0], connections=suspected)
 
-    # Choose vertex V w/ lowest penalty and degree closest to n/2
-    minpenalty = min([suspected.nodes[g]['penalty'] for g in suspected])
-    candidates = [v for v in suspected if suspected.nodes[v]['penalty'] == minpenalty]
-    vertex = min(candidates, key=lambda v: abs(suspected.degree[v] - n/2))
+        # Choose vertex V w/ lowest penalty and degree closest to n/2
+        minpenalty = min([suspected.nodes[g]['penalty'] for g in suspected])
+        candidates = [v for v in suspected if suspected.nodes[v]['penalty'] == minpenalty]
+        vertex = min(candidates, key=lambda v: abs(suspected.degree[v] - n/2))
 
-    # Build subtrees
-    suspect_if_high, suspect_if_low = splitgraph(suspected, vertex)
-    high = getstratgreedy(suspect_if_high)
-    low = getstratgreedy(suspect_if_low)
+        # Build subtrees
+        suspect_if_high, suspect_if_low = splitgraph(suspected, vertex)
+        high = getstratgreedy(suspect_if_high)
+        low = getstratgreedy(suspect_if_low)
 
-    # Construct optimal tree
-    root = GusherNode(vertex, connections=suspected)
-    root.add_children(high, low)
-    return root
+        # Construct optimal tree
+        root = GusherNode(vertex, connections=suspected)
+        root.add_children(high, low)
+        return root
+    return recurse(gusher_map.connections)
 
 
 def getstrat(connections, distances=None, wide=True, start=BASKET_LABEL, debug=False):
@@ -115,7 +118,7 @@ def getstrat(connections, distances=None, wide=True, start=BASKET_LABEL, debug=F
 
     def penalty(gusher):
         if gusher != BASKET_LABEL:
-            return connections.nodes[gusher]['penalty']
+            return connections.nodes[gusher]['weight']
         else:
             return 1
 
@@ -127,10 +130,10 @@ def getstrat(connections, distances=None, wide=True, start=BASKET_LABEL, debug=F
 
     def score_candidate(candidate, latest_open):
         if latest_open != BASKET_LABEL:
-            return candidate.obj + penalty(latest_open)*(candidate.total_path_length +
-                                                         distance(latest_open, candidate.name)*candidate.size)
+            return candidate.total_cost + penalty(latest_open)*(candidate.total_path_length +
+                                                                distance(latest_open, candidate.name)*candidate.size)
         else:
-            return candidate.obj + penalty(latest_open)*distance(latest_open, candidate.name)
+            return candidate.total_cost + penalty(latest_open)*distance(latest_open, candidate.name)
 
     solved_subgraphs = dict()
     # dict that associates a subgraph with its solution subtrees and their objective scores
@@ -178,23 +181,22 @@ def getstrat(connections, distances=None, wide=True, start=BASKET_LABEL, debug=F
                 high = recurse(suspect_if_high, opened_new, vertex, solved)
                 low = recurse(suspect_if_low, opened_new, vertex, solved)
                 dist_h, dist_l = 1, 1
-                if distances:
-                    if high:
-                        dist_h = distance(vertex, high.name)
-                    if low:
-                        dist_l = distance(vertex, low.name)
+                if high:
+                    dist_h = distance(vertex, high.name)
+                if low:
+                    dist_l = distance(vertex, low.name)
                 root = GusherNode(vertex, connections, findable=findable)
                 root.add_children(high, low, dist_h, dist_l)
                 candidates.append(root)
                 printlog(f'subgraph: {key_str}\n'
                          f'    candidate solution: {writetree(root)}\n'
-                         f'    score: {root.obj}\n')
+                         f'    score: {root.total_cost}\n')
             solved[key] = deepcopy(candidates)
 
         root = min(candidates, key=lambda cand: score_candidate(cand, latest_open))
         printlog(f'{key_str}; options: \n' +
                  '\n'.join(f'    ~{latest_open}--{distance(latest_open, tree.name):g}--> ' +
-                           f'{tree}({tree.high}, {tree.low}), raw score: {tree.obj}, ' +
+                           f'{tree}({tree.high}, {tree.low}), raw score: {tree.total_cost}, ' +
                            f'final score: {score_candidate(tree, latest_open)}'
                            for tree in candidates) +
                  f'\n    choose gusher {root}: {writetree(root)}')
@@ -222,9 +224,9 @@ if __name__ == '__main__':
     strat2 = getstrat(G, dist, debug=True)
     # lo_fh = readtree('f(d(e, h), h*(g(i,), a(c(b,),)))', G, dist)
     # lo_min = readtree('h(e(f(,i), g), a(c(b,), d))', G, dist)
-    print(f'greedy ({greedy.obj}): {writetree(greedy)}\n    { {node.name: node.cost for node in greedy} }')
-    print(f'w/o distances ({strat.obj}): {writetree(strat)}\n    { {node.name: node.cost for node in strat} }')
-    print(f'w/ distances ({strat2.obj}): {writetree(strat2)} \n    { {node.name: node.cost for node in strat2} }')
+    print(f'greedy ({greedy.total_cost}): {writetree(greedy)}\n    { {node.name: node.cost for node in greedy} }')
+    print(f'w/o distances ({strat.total_cost}): {writetree(strat)}\n    { {node.name: node.cost for node in strat} }')
+    print(f'w/ distances ({strat2.total_cost}): {writetree(strat2)} \n    { {node.name: node.cost for node in strat2} }')
     # print(f'FH ({lo_fh.obj}): {writetree(lo_fh)} \n    { {node.name: node.cost for node in lo_fh} }')
     # print(f'min ({lo_min.obj}): {writetree(lo_min)} \n    { {node.name: node.cost for node in lo_min} }')
 

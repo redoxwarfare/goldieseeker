@@ -1,5 +1,5 @@
-$ Salmonid Smokeyard
-   a, b, c, d, e, f, g, @
+# Salmonid Smokeyard
+#  a, b, c, d, e, f, g, @
 a, 0,  ,  ,  ,  ,  ,  , 0
 b,  , 0,  ,  ,  ,  ,  , 0
 c,  ,  , 0,  ,  ,  ,  , 0

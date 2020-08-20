@@ -1,5 +1,4 @@
-$ Spawning Grounds
-$ {'bc': 2.5, '.': 1}
+# Spawning Grounds
 a b d g h
 b c d g i
 c d e f g

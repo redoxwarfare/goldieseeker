@@ -5,7 +5,7 @@ NEVER_FIND_FLAG = '*'
 
 # TODO - try implementing threaded binary tree to improve performance?
 class GusherNode:
-    def __init__(self, name, connections=None, penalty=1, findable=True):  # connections is a networkx graph
+    def __init__(self, name, weight=1, findable=True):
         self.name = name
         self.low = None  # next gusher to open if this gusher is low
         self.high = None  # next gusher to open if this gusher is high
@@ -13,22 +13,19 @@ class GusherNode:
         self.findable = findable  # whether it is possible to find the Goldie at this gusher
         # if findable is False, the gusher is being opened solely for information (e.g. gusher C on Marooner's Bay)
         # non-findable nodes still count towards their children's costs, but don't count towards tree's objective score
-        if connections:
-            self.penalty = connections.nodes[name]['penalty']  # penalty multiplier for this gusher
-        else:
-            self.penalty = penalty
+        self.weight = weight  # penalty weight for this gusher
         self.distance = 1  # distance from parent gusher
         self.size = 1 if findable else 0  # number of findable nodes in subtree rooted at this node
         self.total_path_length = 0  # sum of lengths of each path between this node and one of its findable descendants
         self.cost = 0  # if Goldie is in this gusher, total penalty incurred by following decision tree
-        self.obj = 0  # objective function evaluated on subtree with this node as root
+        self.total_cost = 0  # objective function evaluated on subtree with this node as root
 
     def __str__(self):
         return self.name + (NEVER_FIND_FLAG if not self.findable else "")
 
     def __repr__(self):
         return f'{{{str(self)} > ({self.high}, {self.low}), ' + \
-               f'p: {self.penalty}, c: {self.cost}, o: {self.obj}}}'
+               f'time: {self.total_path_length}, cost: {self.total_cost}}}'
 
     def __iter__(self):
         yield self
@@ -41,7 +38,7 @@ class GusherNode:
         if not other:
             return False
         else:
-            return self.name == other.name and self.penalty == other.penalty and self.findable == other.findable
+            return self.name == other.name and self.weight == other.weight and self.findable == other.findable
 
     def sametree(self, other):
         if not other:
@@ -70,7 +67,7 @@ class GusherNode:
             self.high.distance = dist_h
             size_h = self.high.size
             totpath_h = self.high.total_path_length
-            obj_h = self.high.obj
+            obj_h = self.high.total_cost
         if low:
             assert not self.low, f'gusher {self} already has low child {self.low}'
             assert not low.parent, f'gusher {low} already has parent {low.parent}'
@@ -79,10 +76,10 @@ class GusherNode:
             self.low.distance = dist_l
             size_l = self.low.size
             totpath_l = self.low.total_path_length
-            obj_l = self.low.obj
+            obj_l = self.low.total_cost
         self.size = size_l + size_h + (1 if self.findable else 0)
         self.total_path_length = totpath_l + dist_l*size_l + totpath_h + dist_h*size_h
-        self.obj = obj_l + obj_h + self.penalty*self.total_path_length
+        self.total_cost = obj_l + obj_h + self.weight*self.total_path_length
 
     def update_costs(self, distances=None):
         """Update costs of this node's descendants. Should be called on root of tree."""
@@ -94,17 +91,17 @@ class GusherNode:
             if node.high:
                 if distances:
                     node.high.distance = distances[node.name][node.high.name]['weight']
-                recurse(node.high, predecessor_penalties + node.penalty)
+                recurse(node.high, predecessor_penalties + node.weight)
             if node.low:
                 if distances:
                     node.low.distance = distances[node.name][node.low.name]['weight']
-                recurse(node.low, predecessor_penalties + node.penalty)
+                recurse(node.low, predecessor_penalties + node.weight)
         recurse(self, 0)
 
     def calc_tree_obj(self, distances=None):
         """Calculate and store the objective score of the tree rooted at this node."""
         self.update_costs(distances)
-        self.obj = sum(node.cost for node in self if node.findable)
+        self.total_cost = sum(node.cost for node in self if node.findable)
 
     def validate(self):
         """Check that tree is a valid strategy."""
