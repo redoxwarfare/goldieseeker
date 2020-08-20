@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 
 from GusherMap import GusherMap
-from GusherNode import write_tree, read_tree
+from GusherNode import write_tree, read_tree, write_instructions
 from getstrats import get_strat, get_strat_greedy
 
 import argparse
@@ -17,6 +17,7 @@ parser.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
 parser.add_argument("map_id", nargs='*', help="name(s) of folder in 'gusher graphs'")
 parser.add_argument("--log", help="print log of search algorithm's internal process", action='store_true')
 parser.add_argument("--plot", help="display gusher graph", action='store_true')
+parser.add_argument("--verbose", "-V", help="display strategy as human-readable instructions", action="store_true")
 
 
 def plot_graph(gusher_map):
@@ -41,7 +42,7 @@ rec_strats = {'sg': 'd(g(a(b, c), f(e,)), g*(h, i))',
               'lo': 'h(f(e, g(i,)), f*(d, a(c(b,),)))'}
 
 
-def report(map_id, log=False, plot=False):
+def report(map_id, log=False, plot=False, verbose=False):
     if map_id in maps:
         gusher_map = maps[map_id]
     else:
@@ -76,8 +77,11 @@ def report(map_id, log=False, plot=False):
             strat.update_costs(gusher_map)
             latencies = {str(g): g.latency for g in strat if g.findable}
             risks = {str(g): g.risk for g in strat if g.findable}
-            print(f'{desc} strat: {write_tree(strat)}\n'
-                  f'    times: {{' + ', '.join(f'{node}: {time}' for node, time in latencies.items()) + '}\n'
+            if verbose:
+                print(f'{desc} strat:\n' + write_instructions(strat))
+            else:
+                print(f'{desc} strat: {write_tree(strat)}')
+            print(f'    times: {{' + ', '.join(f'{node}: {time}' for node, time in latencies.items()) + '}\n'
                   f'    risks: {{' + ', '.join(f'{node}: {risk}' for node, risk in risks.items()) + '}\n'
                   f'    avg. time: {mean(latencies.values()):0.2f} +/- {pstdev(latencies.values()):0.2f}\n'
                   f'    avg. risk: {mean(risks.values()):0.2f} +/- {pstdev(risks.values()):0.2f}')
@@ -95,7 +99,7 @@ def main():
     while not stop:
         try:
             for map_id in args.map_id:
-                report(map_id, args.log, args.plot)
+                report(map_id, args.log, args.plot, args.verbose)
         except FileNotFoundError as e:
             print(f"Couldn't find {e.filename}!")
 

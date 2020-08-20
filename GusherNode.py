@@ -212,4 +212,4 @@ def write_instructions(tree):
         else:
             result = ', '.join(str(node) for node in subtree) + '\n'
         return result
-    return recurse(tree, 0)
+    return recurse(tree, 0).strip('\n ')
