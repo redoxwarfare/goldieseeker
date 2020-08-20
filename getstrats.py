@@ -139,7 +139,7 @@ def get_strat(gushers, start=BASKET_LABEL, distances=True, weights=True, wide=Tr
 
 if __name__ == '__main__':
     import cProfile
-    G = GusherMap('sg')
+    G = GusherMap('lo')
 
     greedy = get_strat_greedy(G)
     greedy.calc_tree_total_cost(G)

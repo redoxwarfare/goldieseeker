@@ -1,10 +1,10 @@
 from GusherMap import BASKET_LABEL
+from copy import deepcopy
 from statistics import mean, pstdev
 from pyparsing import Regex, Forward, Suppress, Optional, Group
 
 # Flag to indicate gusher is non-findable
 NEVER_FIND_FLAG = '*'
-UNSET_LATENCY = -1
 
 
 # TODO - try implementing threaded binary tree to improve performance?
@@ -19,7 +19,7 @@ class GusherNode:
         # non-findable nodes still count towards their children's costs, but don't count towards tree's objective score
         self.size = 1 if findable else 0  # number of findable nodes in subtree rooted at this node
         self.distance = 1  # distance from parent gusher
-        self.latency = UNSET_LATENCY  # if Goldie is in this gusher, how long it takes to find Goldie by following decision tree
+        self.latency = 0  # if Goldie is in this gusher, how long it takes to find Goldie by following decision tree
         # latency = total distance traveled on the path from root node to this node
         self.total_latency = 0  # sum of latencies of this node's findable descendants
         if gusher_map:
@@ -50,6 +50,21 @@ class GusherNode:
             return False
         else:
             return self.name == other.name and self.weight == other.weight and self.findable == other.findable
+
+    # Override deepcopy so that it does not copy non-root nodes' cost attributes (weight, size, latency, etc.)
+    # This improves performance without sacrificing any accuracy
+    def __deepcopy__(self, memodict={}):
+        tree_copy = GusherNode(self.name, findable=self.findable)
+        if not self.parent:
+            cost_attrs = ('size', 'distance', 'latency', 'total_latency', 'weight', 'risk', 'total_risk')
+            tree_copy.__dict__.update({attr: self.__dict__.get(attr) for attr in cost_attrs})
+        if self.high:
+            tree_copy.high = deepcopy(self.high)
+            tree_copy.high.parent = tree_copy
+        if self.low:
+            tree_copy.low = deepcopy(self.low)
+            tree_copy.low.parent = tree_copy
+        return tree_copy
 
     def is_same_tree(self, other):
         if not other:
