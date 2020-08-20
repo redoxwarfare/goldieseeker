@@ -1,11 +1,13 @@
 import networkx as nx
 from ast import literal_eval
 from numpy import genfromtxt, nan_to_num
+import warnings
 
 # Special characters for parsing files
 COMMENT_CHAR = '#'
 DEFAULT_CHAR = '.'
 BASKET_LABEL = '@'
+
 
 class GusherMap:
     def __init__(self, map_id):
@@ -23,17 +25,18 @@ class GusherMap:
             nan_to_num(distances_raw, copy=False, nan=1)
             self.distances = nx.from_numpy_array(distances_raw[:, 1:], create_using=nx.DiGraph)
         except ValueError as e:
-            print(f"Couldn't read distances matrix from '{filename}'")
-            print(e)
+            warnings.warn(f"Couldn't read distances matrix from '{filename}'\n" + str(e))
             self.distances = None
         else:
             # noinspection PyTypeChecker
             nx.relabel_nodes(self.distances, lambda i: f'{BASKET_LABEL}abcdefghijklmnopqrstuvwxyz'[i], False)
+            if not self._satisfies_triangle_inequality():
+                warnings.warn(f"Distances matrix in '{self._folder}' does not satisfy triangle inequality")
 
     def _load_connections(self, filename):
-        # Read the map name from the first line of the file
+        # Read the gushers name from the first line of the file
         with open(filename) as f:
-            self.name = f.readline().strip(COMMENT_CHAR + ' ')
+            self.name = f.readline().strip(COMMENT_CHAR + ' \n')
         connections_raw = nx.read_adjlist(filename, comments=COMMENT_CHAR)
         # If _load_distances failed, generate complete digraph from connections graph
         if not self.distances:
@@ -54,7 +57,7 @@ class GusherMap:
         # https://stackoverflow.com/a/26284995
         f = (line for line in open(filename) if not line.lstrip().startswith(COMMENT_CHAR))
         weights_raw = literal_eval(next(f).strip())
-        self.weights = dict()
+        self.weights = {BASKET_LABEL: 0}
         for gusher in self.connections:
             gusher_weight = weights_raw[DEFAULT_CHAR]
             for group in weights_raw:
@@ -62,6 +65,10 @@ class GusherMap:
                     gusher_weight = weights_raw[group]
                     break
             self.weights[gusher] = gusher_weight
+
+    # TODO - write function to check whether 'distances' satisfies triangle inequality
+    def _satisfies_triangle_inequality(self):
+        return True
 
     def __len__(self):
         return len(self.connections)
@@ -74,7 +81,7 @@ class GusherMap:
 
     def distance(self, start, end):
         """Return distance between two gushers."""
-        return self.distances.edges[start][end]
+        return self.distances.adj[start][end]['weight']
 
     def weight(self, vertex):
         """Return the weight of a gusher."""
@@ -103,9 +110,9 @@ def split(graph, vertex, adj=None):
 
 
 if __name__ == '__main__':
-    for id in ('sg', 'ss', 'mb', 'lo', 'ap'):
-        gusher_map = GusherMap(id)
+    for map_id in ('sg', 'ss', 'mb', 'lo', 'ap'):
+        gusher_map = GusherMap(map_id)
         print(gusher_map.name)
         for node in gusher_map:
-            print(f"gusher {node} (weight {gusher_map.weights[node]:g}) is adjacent to " + \
+            print(f"gusher {node} (weight {gusher_map.weights[node]:g}) is adjacent to " +
                   ', '.join(f"{v} ({e['weight']:g})" for v, e in gusher_map.adj(node).items()))
