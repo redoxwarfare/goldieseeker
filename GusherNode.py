@@ -1,4 +1,5 @@
 from GusherMap import BASKET_LABEL
+from statistics import mean, pstdev
 from pyparsing import Regex, Forward, Suppress, Optional, Group
 
 # Flag to indicate gusher is non-findable
@@ -8,7 +9,7 @@ UNSET_LATENCY = -1
 
 # TODO - try implementing threaded binary tree to improve performance?
 class GusherNode:
-    def __init__(self, name, map=None, findable=True):
+    def __init__(self, name, gusher_map=None, findable=True):
         self.name = name
         self.low = None  # next gusher to open if this gusher is low
         self.high = None  # next gusher to open if this gusher is high
@@ -21,8 +22,8 @@ class GusherNode:
         self.latency = UNSET_LATENCY  # if Goldie is in this gusher, how long it takes to find Goldie by following decision tree
         # latency = total distance traveled on the path from root node to this node
         self.total_latency = 0  # sum of latencies of this node's findable descendants
-        if map:
-            self.weight = map.weight(name)  # risk weight for this gusher
+        if gusher_map:
+            self.weight = gusher_map.weight(name)  # risk weight for this gusher
         else:
             self.weight = 1
         self.risk = 0  # if Goldie is in this gusher, roughly how much trash is spawned by following decision tree
@@ -91,6 +92,9 @@ class GusherNode:
         self.total_latency = totlat_l + dist_l*size_l + totlat_h + dist_h*size_h
         self.total_risk = totrisk_l + totrisk_h + self.weight*self.total_latency
 
+    def findable_nodes(self):
+        return (node for node in self if node.findable)
+
     def update_costs(self, gusher_map=None, start=BASKET_LABEL):
         """Update distances, latencies and risks of this node's descendants. Should be called on root of tree."""
         def recurse(node, parent_latency, total_predecessor_weight):
@@ -101,7 +105,10 @@ class GusherNode:
                 node.risk = node.parent.risk + total_predecessor_weight*node.distance
             else:
                 # Latency of root node is distance between start (i.e. basket) and root node
-                node.latency = gusher_map.distance(start, node.name)
+                if gusher_map:
+                    node.latency = gusher_map.distance(start, node.name)
+                else:
+                    node.latency = 0
                 node.risk = 0
 
             if node.high:
@@ -111,12 +118,11 @@ class GusherNode:
 
         recurse(self, 0, 0)
 
-    def calc_tree_total_cost(self, distances=None):
+    def calc_tree_total_cost(self, gusher_map=None):
         """Calculate and store the total latency and total risk of the tree rooted at this node."""
-        self.update_costs(distances)
-        findable_nodes = (node for node in self if node.findable)
+        self.update_costs(gusher_map)
         self.total_latency, self.total_risk = 0, 0
-        for node in findable_nodes:
+        for node in self.findable_nodes():
             self.total_latency += node.latency
             self.total_risk += node.risk
 
@@ -140,6 +146,19 @@ class GusherNode:
                                                     f'node.low.parent {node.low.parent}'
                     recurse(node.low, pred_new)
         recurse(self, set())
+
+    def report(self, gusher_map=None, verbose=False):
+        self.update_costs(gusher_map)
+        latencies = {str(node): node.latency for node in self.findable_nodes()}
+        risks = {str(node): node.risk for node in self.findable_nodes()}
+        if verbose:
+            print(write_instructions(self))
+        else:
+            print(write_tree(self))
+        print(f'    times: {{' + ', '.join(f'{node}: {time}' for node, time in latencies.items()) + '}\n'
+              f'    risks: {{' + ', '.join(f'{node}: {risk}' for node, risk in risks.items()) + '}\n'
+              f'    avg. time: {mean(latencies.values()):0.2f} +/- {pstdev(latencies.values()):0.2f}\n'
+              f'    avg. risk: {mean(risks.values()):0.2f} +/- {pstdev(risks.values()):0.2f}')
 
 
 def write_tree(root):
@@ -175,7 +194,7 @@ def read_tree(tree_str, gusher_map):
     def build_tree(tokens):  # recursively convert ParseResults object into GusherNode tree
         findable = tokens.root[-1] is not NEVER_FIND_FLAG
         rootname = tokens.root.rstrip(NEVER_FIND_FLAG)
-        root = GusherNode(rootname, map=gusher_map, findable=findable)
+        root = GusherNode(rootname, gusher_map=gusher_map, findable=findable)
         if tokens.high or tokens.low:
             high, low = None, None
             dist_h, dist_l = 1, 1

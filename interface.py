@@ -2,12 +2,11 @@ import matplotlib.pyplot as plt
 import networkx as nx
 
 from GusherMap import GusherMap
-from GusherNode import write_tree, read_tree, write_instructions
+from GusherNode import read_tree
 from getstrats import get_strat, get_strat_greedy
 
 import argparse
 import warnings
-from statistics import mean, pstdev
 
 
 # parser for input arguments
@@ -74,17 +73,9 @@ def report(map_id, log=False, plot=False, verbose=False):
                 strat.validate()
             except AssertionError as e:
                 warnings.warn(f'validate() failed for {desc} strat with error "{e}"')
-            strat.update_costs(gusher_map)
-            latencies = {str(g): g.latency for g in strat if g.findable}
-            risks = {str(g): g.risk for g in strat if g.findable}
-            if verbose:
-                print(f'{desc} strat:\n' + write_instructions(strat))
-            else:
-                print(f'{desc} strat: {write_tree(strat)}')
-            print(f'    times: {{' + ', '.join(f'{node}: {time}' for node, time in latencies.items()) + '}\n'
-                  f'    risks: {{' + ', '.join(f'{node}: {risk}' for node, risk in risks.items()) + '}\n'
-                  f'    avg. time: {mean(latencies.values()):0.2f} +/- {pstdev(latencies.values()):0.2f}\n'
-                  f'    avg. risk: {mean(risks.values()):0.2f} +/- {pstdev(risks.values()):0.2f}')
+            print(f"------------\n"
+                  f"{desc} strat:")
+            strat.report()
 
     if plot:
         with warnings.catch_warnings():

@@ -19,7 +19,7 @@ def get_strat_greedy(gusher_map):
         if n == 0:
             return None
         if n == 1:
-            return GusherNode(list(suspected.nodes)[0], map=gusher_map)
+            return GusherNode(list(suspected.nodes)[0], gusher_map=gusher_map)
 
         # Choose vertex V w/ lowest penalty and degree closest to n/2
         min_weight = min(gusher_map.weight(v) for v in suspected)
@@ -32,7 +32,7 @@ def get_strat_greedy(gusher_map):
         low = recurse(suspect_if_low)
 
         # Construct optimal tree
-        root = GusherNode(vertex, map=gusher_map)
+        root = GusherNode(vertex, gusher_map=gusher_map)
         root.add_children(high, low)
         return root
 
@@ -40,7 +40,7 @@ def get_strat_greedy(gusher_map):
 
 
 def get_strat(gushers, start=BASKET_LABEL, distances=True, weights=True, wide=True, debug=False):
-    """Build the optimal decision tree for a gusher map. Memoized algorithm.
+    """Build the optimal decision tree for a gusher gusher_map. Memoized algorithm.
     "Wide" trees may contain nodes where the Goldie can never be found ("unfindable" nodes), which are marked with *.
     "Narrow" trees contain only findable nodes."""
     def print_log(*args, **kwargs):
@@ -109,7 +109,7 @@ def get_strat(gushers, start=BASKET_LABEL, distances=True, weights=True, wide=Tr
                     dist_h = distance(vertex, high.name)
                 if low:
                     dist_l = distance(vertex, low.name)
-                root = GusherNode(vertex, map=gushers, findable=findable)
+                root = GusherNode(vertex, gusher_map=gushers, findable=findable)
                 root.add_children(high, low, dist_h, dist_l)
                 candidates.append(root)
                 print_log(f'subgraph: {key_str}\n'
