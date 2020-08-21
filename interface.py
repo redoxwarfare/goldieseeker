@@ -59,9 +59,9 @@ def report(map_id, log=False, plot=False, verbose=False):
     full_strat = get_strat(gusher_map, debug=log)
 
     strats = {"equal distance, equal weights": simple_strat,
-              "minimize time": distance_strat,
-              "minimize risk": weighted_strat,
-              "minimize time + risk": full_strat,
+              "minimal time": distance_strat,
+              "minimal risk": weighted_strat,
+              "balanced time + risk": full_strat,
               "recommended": rec_strat}
     for desc in strats:
         strat = strats[desc]

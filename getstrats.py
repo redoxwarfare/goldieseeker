@@ -51,14 +51,13 @@ def get_strat(gushers, start=BASKET_LABEL, tuning=0.5, distances=True, weights=T
     def weight(vertex):
         return gushers.weight(vertex) if weights else 1
 
-    def objective(latency, risk):
+    def score(latency, risk):
         return tuning*risk + (1-tuning)*latency
 
-    def score_candidate(candidate, latest_open):
-        cand_dist = distance(latest_open, candidate.name)
-        latency = candidate.total_latency + cand_dist
-        risk = candidate.total_risk + weight(latest_open)*(candidate.total_latency + cand_dist*candidate.size)
-        return objective(latency, risk)
+    def candidate_cost(candidate, latest_open):
+        latency = candidate.total_latency + distance(latest_open, candidate.name)*candidate.size
+        risk = candidate.total_risk + weight(latest_open)*latency
+        return latency, risk
 
     solved_subgraphs = dict()
     # dict that associates a subgraph with its solution subtrees and their objective scores
@@ -89,12 +88,12 @@ def get_strat(gushers, start=BASKET_LABEL, tuning=0.5, distances=True, weights=T
             search_set = set(gushers).difference(opened)
             for vertex in search_set:
                 findable = vertex in suspected
-                neighbors = set(gushers.adj(vertex))
-                if not findable and (neighbors.issuperset(suspected) or neighbors.isdisjoint(suspected)):
+                neighborhood = set(gushers.adj(vertex))
+                if not findable and (neighborhood.issuperset(suspected) or neighborhood.isdisjoint(suspected)):
                     continue
                     # Don't open non-suspected gushers that are adjacent to all/none of the suspected gushers
                     # Opening them can neither find the Goldie nor provide additional information about the Goldie
-                suspect_if_high, suspect_if_low = split(suspected, vertex, neighbors)
+                suspect_if_high, suspect_if_low = split(suspected, vertex, neighborhood)
                 print_log(f'{key_str}; check gusher {vertex}{flag(findable)}\n'
                           f'    adj: {tuple(suspect_if_high)}\n'
                           f'    non-adj: {tuple(suspect_if_low)}')
@@ -111,15 +110,15 @@ def get_strat(gushers, start=BASKET_LABEL, tuning=0.5, distances=True, weights=T
                 candidates.append(root)
                 print_log(f'subgraph: {key_str}\n'
                           f'    candidate solution: {write_tree(root)}\n'
-                          f'    score: {objective(root.total_latency, root.total_risk):g}\n')
+                          f'    score: {score(root.total_latency, root.total_risk):g}\n')
             solved[key] = deepcopy(candidates)
 
-        root = min(candidates, key=lambda cand: score_candidate(cand, latest_open))
+        root = min(candidates, key=lambda cand: score(*candidate_cost(cand, latest_open)))
         print_log(f'{key_str}; options: \n' +
                   '\n'.join(f'    ~{latest_open}--{distance(latest_open, tree.name):g}--> ' +
                             f'{tree}({tree.high}, {tree.low}), ' +
-                            f'raw score: {objective(tree.total_latency, tree.total_risk):g}, ' +
-                            f'final score: {score_candidate(tree, latest_open):g}'
+                            f'raw score: {score(tree.total_latency, tree.total_risk):g}, ' +
+                            f'final score: {score(*candidate_cost(tree, latest_open)):g}'
                             for tree in candidates) +
                   f'\n    choose gusher {root}: {write_tree(root)}')
         return root

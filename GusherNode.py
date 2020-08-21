@@ -121,6 +121,7 @@ class GusherNode:
                 # Latency of root node is distance between start (i.e. basket) and root node
                 if gusher_map:
                     node.latency = gusher_map.distance(start, node.name)
+                    node.total_latency
                 else:
                     node.latency = 0
                 node.risk = 0
@@ -132,9 +133,9 @@ class GusherNode:
 
         recurse(self, 0, 0)
 
-    def calc_tree_total_cost(self, gusher_map=None):
+    def calc_tree_score(self, gusher_map=None, start=BASKET_LABEL):
         """Calculate and store the total latency and total risk of the tree rooted at this node."""
-        self.update_costs(gusher_map)
+        self.update_costs(gusher_map, start)
         self.total_latency, self.total_risk = 0, 0
         for node in self.findable_nodes():
             self.total_latency += node.latency
@@ -199,7 +200,7 @@ subtrees = LPAREN + subtree.setResultsName('high') + COMMA + subtree.setResultsN
 tree << node.setResultsName('root') + Optional(subtrees)
 
 
-def read_tree(tree_str, gusher_map):
+def read_tree(tree_str, gusher_map, start=BASKET_LABEL):
     """Read the strategy encoded in tree_str and build the corresponding decision tree.
     V(H, L) represents the tree with root node V, high subtree H, and low subtree L.
     A node name followed by * indicates that the gusher is being opened solely for information and the Goldie will
@@ -225,7 +226,8 @@ def read_tree(tree_str, gusher_map):
 
     tokens = tree.parseString(tree_str)
     root = build_tree(tokens)
-    root.calc_tree_total_cost(gusher_map)
+
+    root.calc_tree_score(gusher_map, start)
     return root
 
 
