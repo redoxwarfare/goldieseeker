@@ -21,16 +21,16 @@ class GusherMap:
 
     def _load_distances(self, filename):
         try:
-            distances_raw = genfromtxt(filename, delimiter=', ', comments=COMMENT_CHAR)
+            distances_raw = genfromtxt(filename, delimiter=',', comments=COMMENT_CHAR)
             nan_to_num(distances_raw, copy=False, nan=1)
-            self.distances = nx.from_numpy_array(distances_raw[:, 1:], create_using=nx.DiGraph)
+            self.distances = nx.from_numpy_array(distances_raw, create_using=nx.DiGraph)
         except ValueError as e:
             warnings.warn(f"Couldn't read distances matrix from '{filename}'\n" + str(e))
             self.distances = None
         else:
             # noinspection PyTypeChecker
             nx.relabel_nodes(self.distances, lambda i: f'{BASKET_LABEL}abcdefghijklmnopqrstuvwxyz'[i], False)
-            violations = self._violates_triangle_inequality()
+            violations = self._find_triangle_inequality_violations()
             if violations:
                 warnings.warn(f"Distances matrix in '{self._folder}' does not satisfy triangle inequality:\n" +
                               ''.join(f"    {t[0]}->{t[1]}->{t[2]} ({t[3]}) is shorter than {t[0]}->{t[2]} ({t[4]})\n"
@@ -72,7 +72,7 @@ class GusherMap:
                     break
             self.weights[gusher] = gusher_weight
 
-    def _violates_triangle_inequality(self):
+    def _find_triangle_inequality_violations(self):
         distance = lambda start, end: self.distances.adj[start][end]['weight']
         violations = set()
         for vertex in self.distances:

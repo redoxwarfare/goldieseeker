@@ -145,10 +145,8 @@ if __name__ == '__main__':
     greedy.calc_tree_total_cost(G)
     strat = get_strat(G, debug=True)
     strat.calc_tree_total_cost(G)
-    print(f'greedy ({greedy.total_risk}): {write_tree(greedy)}\n    { {node.name: node.risk for node in greedy} }')
-    print(f'optimal ({strat.total_risk}): {write_tree(strat)}\n' +
-          f'    { {node.name: node.risk for node in strat} }')
-    print(write_instructions(strat))
+    greedy.report(G, verbose=True)
+    strat.report(G, verbose=True)
 
     def profile(n=1):
         for i in range(n):
