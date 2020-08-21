@@ -29,6 +29,7 @@ def plot_graph(gusher_map):
     nx.draw_networkx_labels(graph, pos_attrs, labels=nx.get_node_attributes(graph, 'penalty'))
     plt.show()
 
+
 with warnings.catch_warnings():
     warnings.simplefilter('ignore')
     maps = {map_id: GusherMap(map_id) for map_id in ['sg', 'ss', 'mb', 'lo', 'ap']}
@@ -50,11 +51,9 @@ def report(map_id, log=False, plot=False, verbose=False):
 
     if map_id in rec_strats:
         rec_strat = read_tree(rec_strats[map_id], gusher_map)
-        rec_strat.calc_tree_total_cost(gusher_map)
     else:
         rec_strat = None
     greedy_strat = get_strat_greedy(gusher_map)
-    greedy_strat.calc_tree_total_cost(gusher_map)
     simple_strat = get_strat(gusher_map, distances=False, weights=False)
     distance_strat = get_strat(gusher_map, weights=False)
     weighted_strat = get_strat(gusher_map, distances=False)
@@ -75,7 +74,7 @@ def report(map_id, log=False, plot=False, verbose=False):
                 warnings.warn(f'validate() failed for {desc} strat with error "{e}"')
             print(f"------------\n"
                   f"{desc} strat:")
-            strat.report()
+            strat.report(gusher_map, verbose)
 
     if plot:
         with warnings.catch_warnings():

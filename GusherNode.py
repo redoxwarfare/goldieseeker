@@ -169,8 +169,8 @@ class GusherNode:
             print(write_instructions(self))
         else:
             print(write_tree(self))
-        print(f'    times: {{' + ', '.join(f'{node}: {time}' for node, time in latencies.items()) + '}\n'
-              f'    risks: {{' + ', '.join(f'{node}: {risk}' for node, risk in risks.items()) + '}\n'
+        print(f'    times: {{' + ', '.join(f'{node}: {time:0.2f}' for node, time in sorted(latencies.items())) + '}\n'
+              f'    risks: {{' + ', '.join(f'{node}: {risk:0.2f}' for node, risk in sorted(risks.items())) + '}\n'
               f'    avg. time: {mean(latencies.values()):0.2f} +/- {pstdev(latencies.values()):0.2f}\n'
               f'    avg. risk: {mean(risks.values()):0.2f} +/- {pstdev(risks.values()):0.2f}')
 
@@ -234,8 +234,6 @@ def write_instructions(tree):
     def recurse(subtree, depth):
         indent = "   "*depth
         result = ""
-        if depth > 0:
-            result += f"{subtree}\n" + indent
         if subtree.size > 2 or (subtree.high and subtree.low):
             result += f"open {subtree}\n"
             if subtree.high:

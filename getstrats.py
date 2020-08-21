@@ -142,9 +142,7 @@ if __name__ == '__main__':
     G = GusherMap('lo')
 
     greedy = get_strat_greedy(G)
-    greedy.calc_tree_total_cost(G)
     strat = get_strat(G, debug=True)
-    strat.calc_tree_total_cost(G)
     greedy.report(G, verbose=True)
     strat.report(G, verbose=True)
 

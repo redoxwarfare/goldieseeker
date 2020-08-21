@@ -73,7 +73,8 @@ class GusherMap:
             self.weights[gusher] = gusher_weight
 
     def _find_triangle_inequality_violations(self):
-        distance = lambda start, end: self.distances.adj[start][end]['weight']
+        def distance(start, end):
+            return self.distances.adj[start][end]['weight']
         violations = set()
         for vertex in self.distances:
             neighborhood = set(self.distances.adj[vertex])
