@@ -121,7 +121,7 @@ class GusherNode:
                 # Latency of root node is distance between start (i.e. basket) and root node
                 if gusher_map:
                     node.latency = gusher_map.distance(start, node.name)
-                    node.total_latency
+                    node.total_latency += node.latency*node.size
                 else:
                     node.latency = 0
                 node.risk = 0

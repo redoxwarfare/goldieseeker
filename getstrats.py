@@ -113,7 +113,7 @@ def get_strat(gushers, start=BASKET_LABEL, tuning=0.5, distances=True, weights=T
                           f'    score: {score(root.total_latency, root.total_risk):g}\n')
             solved[key] = deepcopy(candidates)
 
-        root = min(candidates, key=lambda cand: score(*candidate_cost(cand, latest_open)))
+        root = min(candidates, key=lambda tree: score(*candidate_cost(tree, latest_open)))
         print_log(f'{key_str}; options: \n' +
                   '\n'.join(f'    ~{latest_open}--{distance(latest_open, tree.name):g}--> ' +
                             f'{tree}({tree.high}, {tree.low}), ' +

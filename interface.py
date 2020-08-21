@@ -1,9 +1,10 @@
+import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
 
 from GusherMap import GusherMap
 from GusherNode import read_tree
-from getstrats import get_strat, get_strat_greedy
+from getstrats import get_strat
 
 import argparse
 import warnings
@@ -13,10 +14,10 @@ import warnings
 parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
                     help='Show this help message.')
-parser.add_argument("map_id", nargs='*', help="name(s) of folder in 'gusher graphs'")
-parser.add_argument("--log", help="print log of search algorithm's internal process", action='store_true')
-parser.add_argument("--plot", help="display gusher graph", action='store_true')
-parser.add_argument("--verbose", "-V", help="display strategy as human-readable instructions", action="store_true")
+parser.add_argument('map_id', nargs='*', help="name(s) of folder in 'gusher graphs'")
+parser.add_argument('-p', '--plot', help="display gusher graph", action='store_true')
+parser.add_argument('-v', '--verbose', help="display strategy as human-readable instructions", action='store_true')
+parser.add_argument('-l', '--log', help="print log of search algorithm's internal process", action='store_true')
 
 
 def plot_graph(gusher_map):
@@ -81,6 +82,9 @@ def report(map_id, log=False, plot=False, verbose=False):
             plot_graph(gusher_map)
 
 
+# TODO - Separate functions into their own scripts
+# TODO - Add script for inputting strategies, scoring, and saving to file
+# TODO - Add tuning factor as argument
 def main():
     args, other = parser.parse_known_args()
     stop = False
@@ -88,10 +92,10 @@ def main():
         try:
             for map_id in args.map_id:
                 report(map_id, args.log, args.plot, args.verbose)
-        except FileNotFoundError as e:
-            print(f"Couldn't find {e.filename}!")
+        except (FileNotFoundError, IOError) as e:
+            print(e)
 
-        input_str = input('Input gushers ID(s), "-h" for help, or "quit" to quit: ')
+        input_str = input('Input map ID(s), "-h" for help, or "quit" to quit: ')
         if input_str == "quit":
             stop = True
         else:
