@@ -53,17 +53,15 @@ def report(map_id, log=False, plot=False, verbose=False):
         rec_strat = read_tree(rec_strats[map_id], gusher_map)
     else:
         rec_strat = None
-    greedy_strat = get_strat_greedy(gusher_map)
     simple_strat = get_strat(gusher_map, distances=False, weights=False)
-    distance_strat = get_strat(gusher_map, weights=False)
-    weighted_strat = get_strat(gusher_map, distances=False)
+    distance_strat = get_strat(gusher_map, tuning=0)
+    weighted_strat = get_strat(gusher_map, tuning=1)
     full_strat = get_strat(gusher_map, debug=log)
 
-    strats = {"greedy": greedy_strat,
-              "equal distance, equal weights": simple_strat,
-              "distance only": distance_strat,
-              "weights only": weighted_strat,
-              "distance + weights": full_strat,
+    strats = {"equal distance, equal weights": simple_strat,
+              "minimize time": distance_strat,
+              "minimize risk": weighted_strat,
+              "minimize time + risk": full_strat,
               "recommended": rec_strat}
     for desc in strats:
         strat = strats[desc]

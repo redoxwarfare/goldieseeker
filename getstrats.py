@@ -39,10 +39,8 @@ def get_strat_greedy(gusher_map):
     return recurse(gusher_map.connections)
 
 
-def get_strat(gushers, start=BASKET_LABEL, distances=True, weights=True, wide=True, debug=False):
-    """Build the optimal decision tree for a gusher gusher_map. Memoized algorithm.
-    "Wide" trees may contain nodes where the Goldie can never be found ("unfindable" nodes), which are marked with *.
-    "Narrow" trees contain only findable nodes."""
+def get_strat(gushers, start=BASKET_LABEL, tuning=0.5, distances=True, weights=True, debug=False):
+    """Build the optimal decision tree for a gusher map. Memoized algorithm."""
     def print_log(*args, **kwargs):
         if debug:
             print(*args, **kwargs)
@@ -53,11 +51,14 @@ def get_strat(gushers, start=BASKET_LABEL, distances=True, weights=True, wide=Tr
     def weight(vertex):
         return gushers.weight(vertex) if weights else 1
 
+    def objective(latency, risk):
+        return tuning*risk + (1-tuning)*latency
+
     def score_candidate(candidate, latest_open):
         cand_dist = distance(latest_open, candidate.name)
         latency = candidate.total_latency + cand_dist
         risk = candidate.total_risk + weight(latest_open)*(candidate.total_latency + cand_dist*candidate.size)
-        return latency + risk
+        return objective(latency, risk)
 
     solved_subgraphs = dict()
     # dict that associates a subgraph with its solution subtrees and their objective scores
@@ -80,16 +81,12 @@ def get_strat(gushers, start=BASKET_LABEL, distances=True, weights=True, wide=Tr
 
         candidates = list()
         key = (frozenset(suspected), frozenset(opened))
-        key_str = f'({", ".join(str(u) for u in suspected)}{" | " if wide else ""}' + \
-                  f'{", ".join(f"~{o}" for o in opened)})'
+        key_str = f'({", ".join(str(u) for u in suspected)} | {", ".join(f"~{o}" for o in opened)})'
         if key in solved:  # Don't recalculate subtrees for subgraphs we've already solved
             candidates = deepcopy(solved[key])
         else:
             # Generate best subtrees for this subgraph
-            if wide:  # Wide strategies consider all unopened gushers
-                search_set = set(gushers).difference(opened)
-            else:  # Narrow strategies consider only suspected gushers
-                search_set = set(suspected)
+            search_set = set(gushers).difference(opened)
             for vertex in search_set:
                 findable = vertex in suspected
                 neighbors = set(gushers.adj(vertex))
@@ -101,7 +98,7 @@ def get_strat(gushers, start=BASKET_LABEL, distances=True, weights=True, wide=Tr
                 print_log(f'{key_str}; check gusher {vertex}{flag(findable)}\n'
                           f'    adj: {tuple(suspect_if_high)}\n'
                           f'    non-adj: {tuple(suspect_if_low)}')
-                opened_new = opened.union(set(vertex)) if wide else opened
+                opened_new = opened.union(set(vertex))
                 high = recurse(suspect_if_high, opened_new, vertex, solved)
                 low = recurse(suspect_if_low, opened_new, vertex, solved)
                 dist_h, dist_l = 1, 1
@@ -114,24 +111,21 @@ def get_strat(gushers, start=BASKET_LABEL, distances=True, weights=True, wide=Tr
                 candidates.append(root)
                 print_log(f'subgraph: {key_str}\n'
                           f'    candidate solution: {write_tree(root)}\n'
-                          f'    score: {root.total_latency + root.total_risk:g}\n')
+                          f'    score: {objective(root.total_latency, root.total_risk):g}\n')
             solved[key] = deepcopy(candidates)
 
         root = min(candidates, key=lambda cand: score_candidate(cand, latest_open))
         print_log(f'{key_str}; options: \n' +
                   '\n'.join(f'    ~{latest_open}--{distance(latest_open, tree.name):g}--> ' +
-                            f'{tree}({tree.high}, {tree.low}), raw score: {tree.total_risk + tree.total_latency:g}, ' +
+                            f'{tree}({tree.high}, {tree.low}), ' +
+                            f'raw score: {objective(tree.total_latency, tree.total_risk):g}, ' +
                             f'final score: {score_candidate(tree, latest_open):g}'
                             for tree in candidates) +
                   f'\n    choose gusher {root}: {write_tree(root)}')
         return root
 
-    print_log(f"\nWIDE SEARCH\n"
-              f"(U | ~O) means gushers in U could have Goldie, gushers in O have already been opened\n"
-              f"------------------------------------------------------------------------------------" if wide else
-              f"\nNARROW SEARCH\n"
-              f"(U) means gushers in U could have Goldie\n"
-              f"-------------------------------------------")
+    print_log(f"(U | ~O) means gushers in U could have Goldie, gushers in O have already been opened\n"
+              f"------------------------------------------------------------------------------------")
     root = recurse(gushers.connections, set(), start, solved_subgraphs)
     root.update_costs(gushers, start=start)
     return root
