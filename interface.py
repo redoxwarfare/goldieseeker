@@ -1,4 +1,3 @@
-import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
 
@@ -20,6 +19,7 @@ parser.add_argument('-v', '--verbose', help="display strategy as human-readable 
 parser.add_argument('-l', '--log', help="print log of search algorithm's internal process", action='store_true')
 
 
+# TODO - use Salmon Learn map images
 def plot_graph(gusher_map):
     graph = gusher_map.connections
     plt.figure()
@@ -39,7 +39,7 @@ with warnings.catch_warnings():
 rec_strats = {'sg': 'd(g(a(b, c), f(e,)), g*(h, i))',
               'ap': 'f(g(e, c(d,)), g*(a, b))',
               'ss': 'f(d(b, g), e(c, a))',
-              'mb': 'c(b(d(a,), f), b*(e, h(g,)))',
+              'mb': 'b(c(d(a,), e), c*(f, h(g,)))',
               'lo': 'h(f(e, g(i,)), f*(d, a(c(b,),)))'}
 
 
@@ -59,20 +59,20 @@ def report(map_id, log=False, plot=False, verbose=False):
     weighted_strat = get_strat(gusher_map, tuning=1)
     full_strat = get_strat(gusher_map, debug=log)
 
-    strats = {"equal distance, equal weights": simple_strat,
-              "minimal time": distance_strat,
-              "minimal risk": weighted_strat,
+    strats = {"simple": simple_strat,
+              "shortest time": distance_strat,
+              "lowest risk": weighted_strat,
               "balanced time + risk": full_strat,
-              "recommended": rec_strat}
+              "standard": rec_strat}
     for desc in strats:
         strat = strats[desc]
         if strat:
             try:
                 strat.validate()
             except AssertionError as e:
-                warnings.warn(f'validate() failed for {desc} strat with error "{e}"')
+                warnings.warn(f'validate() failed for {desc} strategy with error "{e}"')
             print(f"------------\n"
-                  f"{desc} strat:")
+                  f"{desc} strategy:")
             strat.report(gusher_map, verbose)
 
     if plot:

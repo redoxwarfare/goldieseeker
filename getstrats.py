@@ -1,5 +1,5 @@
 from GusherMap import GusherMap, split, BASKET_LABEL
-from GusherNode import GusherNode, NEVER_FIND_FLAG, write_tree, write_instructions
+from GusherNode import GusherNode, NEVER_FIND_FLAG, write_tree
 from copy import deepcopy
 
 
@@ -97,7 +97,7 @@ def get_strat(gushers, start=BASKET_LABEL, tuning=0.5, distances=True, weights=T
                 print_log(f'{key_str}; check gusher {vertex}{flag(findable)}\n'
                           f'    adj: {tuple(suspect_if_high)}\n'
                           f'    non-adj: {tuple(suspect_if_low)}')
-                opened_new = opened.union(set(vertex))
+                opened_new = opened.union({vertex})
                 high = recurse(suspect_if_high, opened_new, vertex, solved)
                 low = recurse(suspect_if_low, opened_new, vertex, solved)
                 dist_h, dist_l = 1, 1

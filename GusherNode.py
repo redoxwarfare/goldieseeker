@@ -52,6 +52,7 @@ class GusherNode:
 
     # Override deepcopy so that it does not copy non-root nodes' cost attributes (weight, size, latency, etc.)
     # This improves performance without sacrificing any accuracy
+    # noinspection PyDefaultArgument
     def __deepcopy__(self, memodict={}):
         tree_copy = GusherNode(self.name, findable=self.findable)
         if not self.parent:
@@ -142,7 +143,7 @@ class GusherNode:
             self.total_risk += node.risk
 
     def validate(self):
-        """Check that tree is a valid strategy."""
+        """Check that tree is a valid strategy tree."""
         def recurse(node, predecessors):
             # can't open the same gusher twice
             assert str(node) not in predecessors, f'node {node} found in own predecessors: {predecessors}'
@@ -160,6 +161,9 @@ class GusherNode:
                     assert node.low.parent == node, f'node {node}, node.low {node.high}, ' \
                                                     f'node.low.parent {node.low.parent}'
                     recurse(node.low, pred_new)
+            else:
+                # reaching a leaf node must guarantee that the Goldie will be found
+                assert node.findable, f'node {node} is non-findable leaf node'
         recurse(self, set())
 
     def report(self, gusher_map=None, verbose=False):

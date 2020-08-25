@@ -1,13 +1,14 @@
 import networkx as nx
 from ast import literal_eval
 from numpy import genfromtxt, nan_to_num
+from string import ascii_letters
 import warnings
 
 # Special characters for parsing files
 COMMENT_CHAR = '#'
 DEFAULT_CHAR = '.'
 BASKET_LABEL = '@'
-
+GUSHER_LABELS = BASKET_LABEL + ascii_letters
 
 class GusherMap:
     def __init__(self, map_id):
@@ -29,7 +30,7 @@ class GusherMap:
             self.distances = None
         else:
             # noinspection PyTypeChecker
-            nx.relabel_nodes(self.distances, lambda i: f'{BASKET_LABEL}abcdefghijklmnopqrstuvwxyz'[i], False)
+            nx.relabel_nodes(self.distances, lambda i: (BASKET_LABEL + ascii_letters)[i], False)
             violations = self._find_triangle_inequality_violations()
             if violations:
                 warnings.warn(f"Distances matrix in '{self._folder}' does not satisfy triangle inequality:\n" +
