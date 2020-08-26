@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from numpy import genfromtxt
 import networkx as nx
 
 from GusherMap import GusherMap
@@ -18,16 +19,26 @@ parser.add_argument('-p', '--plot', help="display gusher graph", action='store_t
 parser.add_argument('-v', '--verbose', help="display strategy as human-readable instructions", action='store_true')
 parser.add_argument('-l', '--log', help="print log of search algorithm's internal process", action='store_true')
 
+IMAGE_WIDTH = 640
+IMAGE_HEIGHT = 960
+basket_width_in_pixels = {'ap': 25, 'lo': 17, 'mb': 22, 'sg': 22, 'ss': 25}
 
-# TODO - use Salmon Learn map images
-def plot_graph(gusher_map):
+
+# TODO - move plotting code to GusherMap.py
+def plot_graph(gusher_map, map_id=None):
     graph = gusher_map.connections
+    background = plt.imread(f'images/{map_id}.png')
+
+    # convert coordinates from basket widths to pixels
+    coords = gusher_map.coordinates * basket_width_in_pixels[map_id]
+    pos = {sorted(graph)[i]: tuple(coords[i+1, :]) for i in range(len(graph))}
+
     plt.figure()
+    plt.imshow(background, extent=[0, IMAGE_WIDTH, IMAGE_HEIGHT, 0])
     plt.title(gusher_map.name)
-    pos = nx.kamada_kawai_layout(graph)
-    pos_attrs = {node: (coord[0] - 0.08, coord[1] + 0.1) for (node, coord) in pos.items()}
-    nx.draw_networkx(graph, pos, edge_color='#888888', font_color='#ffffff')
-    nx.draw_networkx_labels(graph, pos_attrs, labels=nx.get_node_attributes(graph, 'penalty'))
+    pos_attrs = {node: (coord[0] - 15, coord[1] + 15) for (node, coord) in pos.items()}
+    nx.draw_networkx(graph, pos, node_color='#1a611b', edge_color='#35cc37', font_color='#ffffff', arrows=False)
+    # nx.draw_networkx_labels(graph, pos_attrs, labels=gusher_map.weights)
     plt.show()
 
 
@@ -78,14 +89,15 @@ def report(map_id, log=False, plot=False, verbose=False):
     if plot:
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
-            print('(may need to close graph plot to continue)')
-            plot_graph(gusher_map)
+            print('(if prompt does not reappear, close plot to continue)')
+            plot_graph(gusher_map, map_id)
 
 
 # TODO - Separate functions into their own scripts
 # TODO - Add script for inputting strategies, scoring, and saving to file
 # TODO - Add tuning factor as argument
 def main():
+    plt.ion()
     args, other = parser.parse_known_args()
     stop = False
     while not stop:
