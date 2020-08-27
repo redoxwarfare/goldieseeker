@@ -1,10 +1,10 @@
 # Lost Outpost
 a b c
-b c e
-c e
+b a c e
+c a b e
 d e f
-e f h i
-f h
+e b c d f h i
+f d e h
 g h i
-h i
-i
+h e f g i
+i e h g

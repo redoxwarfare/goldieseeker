@@ -1,10 +1,10 @@
 # Spawning Grounds
 a b d g h
-b c d g i
-c d e f g
-d e f g
-e f
-f
-g h
-h
-i
+b a c d g i
+c b d e f g
+d a b c e f g
+e c d f
+f c d e
+g a b c d h
+h a g
+i b

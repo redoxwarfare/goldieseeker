@@ -1,6 +1,8 @@
 import networkx as nx
 from ast import literal_eval
-from numpy import genfromtxt, nan_to_num
+from numpy import genfromtxt
+from scipy.spatial import distance_matrix
+import matplotlib.pyplot as plt
 from string import ascii_letters
 import warnings
 
@@ -10,32 +12,46 @@ DEFAULT_CHAR = '.'
 BASKET_LABEL = '@'
 GUSHER_LABELS = BASKET_LABEL + ascii_letters
 
+# Constants for plotting graphs
+IMAGE_WIDTH, IMAGE_HEIGHT = 2000, 2000
+EXTENTS = {'ap': (660, 300, 760),
+           'lo': (396, 222, 1074),
+           'mb': (570, 260, 870),
+           'sg': (888, 640, 850),
+           'ss': (363, 526, 720)}
+
+
 class GusherMap:
-    def __init__(self, map_id):
-        self._folder = f'gusher graphs/{map_id}'
-        self.load()
+    def __init__(self, map_id, norm=2):
+        self._map_id = map_id
+        self.load(norm=norm)
 
-    def load(self):
-        self._load_distances(f'{self._folder}/distances.txt')
-        self._load_connections(f'{self._folder}/connections.txt')
-        self._load_weights(f'{self._folder}/weights.txt')
+    def load(self, norm=2):
+        self._load_gushers(f'gusher graphs/{self._map_id}/gushers.csv')
+        self._load_distances(f'gusher graphs/{self._map_id}/distance_modifiers.txt', norm=norm)
+        self._load_connections(f'gusher graphs/{self._map_id}/connections.txt')
+        self._load_weights(f'gusher graphs/{self._map_id}/weights.txt')
 
-    def _load_distances(self, filename):
+    def _load_gushers(self, filename):
+        self._gushers = genfromtxt(filename, delimiter=',', names=['name', 'coord'], dtype=['U8', '2u4'])
+
+    def _load_distances(self, filename, norm=2):
+        coords = self._gushers['coord']
+        adjacency_matrix = distance_matrix(coords, coords, p=norm) / 32
         try:
-            distances_raw = genfromtxt(filename, delimiter=',', comments=COMMENT_CHAR)
-            nan_to_num(distances_raw, copy=False, nan=1)
-            self.distances = nx.from_numpy_array(distances_raw, create_using=nx.DiGraph)
+            distance_modifiers = genfromtxt(filename, delimiter=',', comments=COMMENT_CHAR)
+            adjacency_matrix += distance_modifiers
         except ValueError as e:
-            warnings.warn(f"Couldn't read distances matrix from '{filename}'\n" + str(e))
-            self.distances = None
-        else:
-            # noinspection PyTypeChecker
-            nx.relabel_nodes(self.distances, lambda i: (BASKET_LABEL + ascii_letters)[i], False)
-            violations = self._find_triangle_inequality_violations()
-            if violations:
-                warnings.warn(f"Distances matrix in '{self._folder}' does not satisfy triangle inequality:\n" +
-                              ''.join(f"    {t[0]}->{t[1]}->{t[2]} ({t[3]}) is shorter than {t[0]}->{t[2]} ({t[4]})\n"
-                                      for t in violations))
+            warnings.warn(f"Couldn't read distance modifiers from '{filename}'\n" + str(e))
+
+        self.distances = nx.from_numpy_array(adjacency_matrix, create_using=nx.DiGraph)
+        # noinspection PyTypeChecker
+        nx.relabel_nodes(self.distances, lambda i: self._gushers['name'][i], False)
+        violations = self._find_triangle_inequality_violations()
+        if violations:
+            warnings.warn(f"Distances matrix in '{filename}' does not satisfy triangle inequality:\n" +
+                          ''.join(f"    {t[0]}->{t[1]}->{t[2]} ({t[3]}) is shorter than {t[0]}->{t[2]} ({t[4]})\n"
+                                  for t in violations))
 
     def _load_connections(self, filename):
         # Read the gushers name from the first line of the file
@@ -112,6 +128,27 @@ class GusherMap:
         """Return the number of adjacent gushers for a given gusher."""
         return self.connections.degree[vertex]
 
+    def plot(self):
+        background = plt.imread(f'images/{self._map_id}.png')
+        pos = {gusher['name']: tuple(gusher['coord']) for gusher in self._gushers if gusher['name'] != BASKET_LABEL}
+        pos_attrs = {node: (coord[0] - 25, coord[1] - 25) for (node, coord) in pos.items()}
+
+        if self._map_id in EXTENTS:
+            x, y, length = EXTENTS[self._map_id]
+            extent = [x, x+length, y+length, y]
+            background = background[y:y+length, x:x+length]
+        else:
+            extent = None
+
+        plt.figure()
+        plt.imshow(background, extent=extent)
+        plt.title(self.name)
+        nx.draw_networkx(self.connections, pos,
+                         node_color='#1a611b', edge_color='#35cc37', font_color='#ffffff', arrows=False)
+        nx.draw_networkx_labels(self.connections, pos_attrs, labels={gusher: self.weights[gusher] for gusher in pos},
+                                font_size=10)
+        plt.show()
+
 
 def split(graph, vertex, adj=None):
     """Split graph into two subgraphs: nodes adjacent to vertex V, and nodes not adjacent to V."""
@@ -133,3 +170,4 @@ if __name__ == '__main__':
         for node in gusher_map:
             print(f"gusher {node} (weight {gusher_map.weights[node]:g}) is adjacent to " +
                   ', '.join(f"{v} ({e['weight']:g})" for v, e in gusher_map.adj(node).items()))
+        gusher_map.plot()

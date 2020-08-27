@@ -1,8 +1,8 @@
 # Ruins of Ark Polaris
 a b c d e g
-b c d e
-c d e f
-d e f
-e f g
-f g
-g
+b a c d e
+c a b d e f
+d a b c e f
+e a b c d f g
+f c d e g
+g a f e

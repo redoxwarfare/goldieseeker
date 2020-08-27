@@ -2,7 +2,6 @@ from numpy import genfromtxt, around, savetxt
 from scipy.spatial import distance_matrix
 from GusherMap import COMMENT_CHAR, GUSHER_LABELS
 
-# TODO - turn this into a function?
 # TODO - for AP and MB, try calculating climb-up distances using 1-norm and drop-down distances using 2-norm
 maps = {'ap': "Ruins of Ark Polaris",
         'lo': "Lost Outpost",
@@ -13,7 +12,7 @@ norms = {'ap': 1.5, 'lo': 1.25, 'mb': 1.5, 'sg': 2, 'ss': 1.5}
 
 for map_id in maps:
     coords = genfromtxt(f"gusher graphs/{map_id}/gushers.csv", delimiter=', ')
-    adjacency_matrix = around(0.25*distance_matrix(coords, coords, p=norms[map_id]), decimals=3)
+    adjacency_matrix = around(0.25*distance_matrix(coords[:, 1:], coords[:, 1:], p=norms[map_id]), decimals=3)
     header_str = maps[map_id] + '\n' + \
                  'row: gusher you are coming from\n' + \
                  'column: gusher you are going to\n' + \

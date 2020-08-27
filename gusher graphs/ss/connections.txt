@@ -1,8 +1,8 @@
 # Salmonid Smokeyard
 a b c d
-b c d f
-c e g
-d f
-e g
-f g
-g
+b a c d f
+c a b e g
+d a b f
+e c g
+f b d g
+g c e f

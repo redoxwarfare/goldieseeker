@@ -1,7 +1,4 @@
 import matplotlib.pyplot as plt
-from numpy import genfromtxt
-import networkx as nx
-
 from GusherMap import GusherMap
 from GusherNode import read_tree
 from getstrats import get_strat
@@ -18,29 +15,6 @@ parser.add_argument('map_id', nargs='*', help="name(s) of folder in 'gusher grap
 parser.add_argument('-p', '--plot', help="display gusher graph", action='store_true')
 parser.add_argument('-v', '--verbose', help="display strategy as human-readable instructions", action='store_true')
 parser.add_argument('-l', '--log', help="print log of search algorithm's internal process", action='store_true')
-
-IMAGE_WIDTH = 640
-IMAGE_HEIGHT = 960
-basket_width_in_pixels = {'ap': 25, 'lo': 17, 'mb': 22, 'sg': 22, 'ss': 25}
-
-
-# TODO - move plotting code to GusherMap.py
-def plot_graph(gusher_map, map_id=None):
-    graph = gusher_map.connections
-    background = plt.imread(f'images/{map_id}.png')
-
-    # convert coordinates from basket widths to pixels
-    coords = gusher_map.coordinates * basket_width_in_pixels[map_id]
-    pos = {sorted(graph)[i]: tuple(coords[i+1, :]) for i in range(len(graph))}
-
-    plt.figure()
-    plt.imshow(background, extent=[0, IMAGE_WIDTH, IMAGE_HEIGHT, 0])
-    plt.title(gusher_map.name)
-    pos_attrs = {node: (coord[0] - 15, coord[1] + 15) for (node, coord) in pos.items()}
-    nx.draw_networkx(graph, pos, node_color='#1a611b', edge_color='#35cc37', font_color='#ffffff', arrows=False)
-    # nx.draw_networkx_labels(graph, pos_attrs, labels=gusher_map.weights)
-    plt.show()
-
 
 with warnings.catch_warnings():
     warnings.simplefilter('ignore')
@@ -90,7 +64,7 @@ def report(map_id, log=False, plot=False, verbose=False):
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             print('(if prompt does not reappear, close plot to continue)')
-            plot_graph(gusher_map, map_id)
+            gusher_map.plot()
 
 
 # TODO - Separate functions into their own scripts
