@@ -166,18 +166,18 @@ class GusherNode:
                 assert node.findable, f'node {node} is non-findable leaf node'
         recurse(self, set())
 
-    def report(self, gusher_map=None, verbose=False):
+    def report(self, gusher_map=None):
         self.update_costs(gusher_map)
         latencies = {str(node): node.latency for node in self.findable_nodes()}
         risks = {str(node): node.risk for node in self.findable_nodes()}
-        if verbose:
-            print(write_instructions(self))
-        else:
-            print(write_tree(self))
-        print(f'    times: {{' + ', '.join(f'{node}: {time:0.2f}' for node, time in sorted(latencies.items())) + '}\n'
-              f'    risks: {{' + ', '.join(f'{node}: {risk:0.2f}' for node, risk in sorted(risks.items())) + '}\n'
-              f'    avg. time: {mean(latencies.values()):0.2f} +/- {pstdev(latencies.values()):0.2f}\n'
-              f'    avg. risk: {mean(risks.values()):0.2f} +/- {pstdev(risks.values()):0.2f}')
+        compact_str = write_tree(self)
+        print('-'*len(compact_str))
+        print(compact_str)
+        print(write_instructions(self))
+        print(f'times: {{' + ', '.join(f'{node}: {time:0.2f}' for node, time in sorted(latencies.items())) + '}\n'
+              f'risks: {{' + ', '.join(f'{node}: {risk:0.2f}' for node, risk in sorted(risks.items())) + '}\n'
+              f'avg. time: {mean(latencies.values()):0.2f} +/- {pstdev(latencies.values()):0.2f}\n'
+              f'avg. risk: {mean(risks.values()):0.2f} +/- {pstdev(risks.values()):0.2f}')
 
 
 def write_tree(root):
