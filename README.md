@@ -5,6 +5,6 @@ decision tree notation: G(H, L) means open G; if G high, go to H; if G low, go t
 
 G* means the Goldie will never be found at G
 
-run interface.py to print out and compare some strategies for the different maps
+run "python . -h" from within project directory for help
 
 map images from [Salmon Learn](https://github.com/GungeeSpla/salmon_learn)
