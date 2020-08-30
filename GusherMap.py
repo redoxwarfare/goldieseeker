@@ -13,7 +13,6 @@ BASKET_LABEL = '@'
 GUSHER_LABELS = BASKET_LABEL + ascii_letters
 
 # Constants for plotting graphs
-IMAGE_WIDTH, IMAGE_HEIGHT = 2000, 2000
 EXTENTS = {'ap': (660, 300, 760),
            'lo': (396, 222, 1074),
            'mb': (570, 260, 870),
@@ -37,7 +36,7 @@ class GusherMap:
 
     def _load_distances(self, filename, norm=2):
         coords = self._gushers['coord']
-        adjacency_matrix = distance_matrix(coords, coords, p=norm) / 32
+        adjacency_matrix = distance_matrix(coords, coords, p=norm) / (32*4)
         try:
             distance_modifiers = genfromtxt(filename, delimiter=',', comments=COMMENT_CHAR)
             adjacency_matrix += distance_modifiers
