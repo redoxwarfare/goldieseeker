@@ -21,15 +21,21 @@ EXTENTS = {'ap': (660, 300, 760),
 
 
 class GusherMap:
-    def __init__(self, map_id, norm=2):
+    def __init__(self, map_id, weights=None, norm=2):
         self._map_id = map_id
-        self.load(norm=norm)
+        self.load(weights=weights, norm=norm)
 
-    def load(self, norm=2):
+    def load(self, weights=None, norm=2):
         self._load_gushers(f'gusher graphs/{self._map_id}/gushers.csv')
         self._load_distances(f'gusher graphs/{self._map_id}/distance_modifiers.txt', norm=norm)
         self._load_connections(f'gusher graphs/{self._map_id}/connections.txt')
-        self._load_weights(f'gusher graphs/{self._map_id}/weights.txt')
+        if not weights:
+            # Read the weight dictionary from the first non-commented line of the file
+            # https://stackoverflow.com/a/26284995
+            f = (line for line in open(f'gusher graphs/{self._map_id}/weights.txt')
+                 if not line.lstrip().startswith(COMMENT_CHAR))
+            weights = next(f).strip()
+        self._load_weights(literal_eval(weights))
 
     def _load_gushers(self, filename):
         self._gushers = genfromtxt(filename, delimiter=',', names=['name', 'coord'], dtype=['U8', '2u4'])
@@ -74,17 +80,13 @@ class GusherMap:
         # There's probably some way to induce a subgraph of 'distances' by reading edges directly from connections.txt,
         #   but I'm too lazy to figure out what that is
 
-    def _load_weights(self, filename):
-        # Read the weight dictionary from the first non-commented line of the file
-        # https://stackoverflow.com/a/26284995
-        f = (line for line in open(filename) if not line.lstrip().startswith(COMMENT_CHAR))
-        weights_raw = literal_eval(next(f).strip())
+    def _load_weights(self, weights_dict):
         self.weights = {BASKET_LABEL: 0}
         for gusher in self.connections:
-            gusher_weight = weights_raw[DEFAULT_CHAR]
-            for group in weights_raw:
+            gusher_weight = weights_dict[DEFAULT_CHAR]
+            for group in weights_dict:
                 if gusher in group:
-                    gusher_weight = weights_raw[group]
+                    gusher_weight = weights_dict[group]
                     break
             self.weights[gusher] = gusher_weight
 

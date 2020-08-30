@@ -136,8 +136,8 @@ if __name__ == '__main__':
 
     greedy = get_strat_greedy(G)
     strat = get_strat(G, debug=True)
-    greedy.report(G, verbose=True)
-    strat.report(G, verbose=True)
+    greedy.report(G)
+    strat.report(G)
 
     def profile(n=1):
         for i in range(n):
