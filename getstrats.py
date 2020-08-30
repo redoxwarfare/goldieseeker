@@ -115,10 +115,10 @@ def get_strat(gushers, start=BASKET_LABEL, tuning=0.5, distances=True, weights=T
 
         root = min(candidates, key=lambda tree: score(*candidate_cost(tree, latest_open)))
         print_log(f'{key_str}; options: \n' +
-                  '\n'.join(f'    ~{latest_open}--{distance(latest_open, tree.name):g}--> ' +
+                  '\n'.join(f'    ~{latest_open}--{distance(latest_open, tree.name):0.2f}--> ' +
                             f'{tree}({tree.high}, {tree.low}), ' +
-                            f'raw score: {score(tree.total_latency, tree.total_risk):g}, ' +
-                            f'final score: {score(*candidate_cost(tree, latest_open)):g}'
+                            f'raw score: {score(tree.total_latency, tree.total_risk):0.2f}, ' +
+                            f'final score: {score(*candidate_cost(tree, latest_open)):0.2f}'
                             for tree in candidates) +
                   f'\n    choose gusher {root}: {write_tree(root)}')
         return root
@@ -136,8 +136,8 @@ if __name__ == '__main__':
 
     greedy = get_strat_greedy(G)
     strat = get_strat(G, debug=True)
-    greedy.report(G)
-    strat.report(G)
+    print(greedy.report(G))
+    print(strat.report(G))
 
     def profile(n=1):
         for i in range(n):

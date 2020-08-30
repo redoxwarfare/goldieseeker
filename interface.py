@@ -58,7 +58,7 @@ def report(map_id, log=False, plot=False, verbose=False):
                 warnings.warn(f'validate() failed for {desc} strategy with error "{e}"')
             print(f"------------\n"
                   f"{desc} strategy:")
-            strat.report(gusher_map, verbose)
+            print(strat.report(gusher_map))
 
     if plot:
         with warnings.catch_warnings():

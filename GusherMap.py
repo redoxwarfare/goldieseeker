@@ -55,7 +55,7 @@ class GusherMap:
         violations = self._find_triangle_inequality_violations()
         if violations:
             warnings.warn(f"Distances matrix in '{filename}' does not satisfy triangle inequality:\n" +
-                          ''.join(f"    {t[0]}->{t[1]}->{t[2]} ({t[3]}) is shorter than {t[0]}->{t[2]} ({t[4]})\n"
+                          ''.join(f"    {t[0]}->{t[1]}->{t[2]} ({t[3]:g}) is shorter than {t[0]}->{t[2]} ({t[4]}:g)\n"
                                   for t in violations))
 
     def _load_connections(self, filename):
@@ -170,5 +170,5 @@ if __name__ == '__main__':
         print(gusher_map.name)
         for node in gusher_map:
             print(f"gusher {node} (weight {gusher_map.weights[node]:g}) is adjacent to " +
-                  ', '.join(f"{v} ({e['weight']:g})" for v, e in gusher_map.adj(node).items()))
+                  ', '.join(f"{v} ({e['weight']:0.2f})" for v, e in gusher_map.adj(node).items()))
         gusher_map.plot()
