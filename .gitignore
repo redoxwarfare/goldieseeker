@@ -152,3 +152,4 @@ dmypy.json
 .idea/**/libraries
 
 plots/*
+.idea/inspectionProfiles/goldieseeking.xml
