@@ -4,6 +4,8 @@ from GusherNode import read_tree, write_tree
 from getstrats import get_strat
 
 
+# TODO - start compilation of strategy variants for each gushers
+
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 
