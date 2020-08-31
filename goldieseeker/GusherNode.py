@@ -1,4 +1,4 @@
-from GusherMap import BASKET_LABEL
+from .GusherMap import BASKET_LABEL
 from copy import deepcopy
 from statistics import mean, pstdev
 from pyparsing import Regex, Forward, Suppress, Optional, Group

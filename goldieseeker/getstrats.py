@@ -1,5 +1,5 @@
-from GusherMap import GusherMap, split, BASKET_LABEL
-from GusherNode import GusherNode, NEVER_FIND_FLAG, write_tree
+from .GusherMap import GusherMap, split, BASKET_LABEL
+from .GusherNode import GusherNode, NEVER_FIND_FLAG, write_tree
 from copy import deepcopy
 
 
@@ -130,6 +130,7 @@ def get_strat(gushers, start=BASKET_LABEL, tuning=0.5, distances=True, weights=T
     return root
 
 
+# TODO - move to separate test file
 if __name__ == '__main__':
     import cProfile
     G = GusherMap('lo')

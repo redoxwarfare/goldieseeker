@@ -151,5 +151,4 @@ dmypy.json
 .idea/**/gradle.xml
 .idea/**/libraries
 
-plots/*
 .idea/inspectionProfiles/goldieseeker.xml

@@ -1,7 +1,7 @@
 import click
-from GusherMap import GusherMap
-from GusherNode import read_tree
-from getstrats import get_strat
+from .GusherMap import GusherMap
+from .GusherNode import read_tree
+from .getstrats import get_strat
 
 
 # TODO - start compilation of strategy variants for each gushers

@@ -1,3 +1,4 @@
+import pathlib
 import networkx as nx
 from ast import literal_eval
 from numpy import genfromtxt
@@ -23,16 +24,18 @@ EXTENTS = {'ap': (660, 300, 760),
 class GusherMap:
     def __init__(self, map_id, weights=None, norm=2):
         self._map_id = map_id
+        self._pkg_dir = pathlib.Path(__file__).parent.resolve()
         self.load(weights=weights, norm=norm)
 
     def load(self, weights=None, norm=2):
-        self._load_gushers(f'maps/{self._map_id}/gushers.csv')
-        self._load_distances(f'maps/{self._map_id}/distance_modifiers.txt', norm=norm)
-        self._load_connections(f'maps/{self._map_id}/connections.txt')
+        path = self._pkg_dir/f'maps/{self._map_id}/'
+        self._load_gushers(str(path/'gushers.csv'))
+        self._load_distances(str(path/'distance_modifiers.txt'), norm=norm)
+        self._load_connections(str(path/'connections.txt'))
         if not weights:
             # Read the weight dictionary from the first non-commented line of the file
             # https://stackoverflow.com/a/26284995
-            f = (line for line in open(f'maps/{self._map_id}/weights.txt')
+            f = (line for line in open(str(path/'weights.txt'))
                  if not line.lstrip().startswith(COMMENT_CHAR))
             weights = next(f).strip()
         self._load_weights(literal_eval(weights))
@@ -59,11 +62,12 @@ class GusherMap:
                                   for t in violations))
 
     def _load_connections(self, filename):
-        # Read the gushers name from the first line of the file
+        # Read the map name from the first line of the file
         with open(filename) as f:
             self.name = f.readline().strip(COMMENT_CHAR + ' \n')
         connections_raw = nx.read_adjlist(filename, comments=COMMENT_CHAR)
         # If _load_distances failed, generate complete digraph from connections graph
+        # may no longer be necessary?
         if not self.distances:
             self.distances = nx.complete_graph(connections_raw.nodes, create_using=nx.DiGraph)
             edge_list = [(BASKET_LABEL, node) for node in self.distances]
@@ -130,7 +134,7 @@ class GusherMap:
         return self.connections.degree[vertex]
 
     def plot(self):
-        background = plt.imread(f'images/{self._map_id}.png')
+        background = plt.imread(str(self._pkg_dir/f'images/{self._map_id}.png'))
         pos = {gusher['name']: tuple(gusher['coord']) for gusher in self._gushers if gusher['name'] != BASKET_LABEL}
         pos_attrs = {node: (coord[0] - 40, coord[1]) for (node, coord) in pos.items()}
 
@@ -164,6 +168,7 @@ def split(graph, vertex, adj=None):
     return adj_subgraph, non_adj_subgraph
 
 
+# TODO - move to separate test file
 if __name__ == '__main__':
     for map_id in ('sg', 'ss', 'mb', 'lo', 'ap'):
         gusher_map = GusherMap(map_id)
