@@ -26,13 +26,13 @@ class GusherMap:
         self.load(weights=weights, norm=norm)
 
     def load(self, weights=None, norm=2):
-        self._load_gushers(f'gusher graphs/{self._map_id}/gushers.csv')
-        self._load_distances(f'gusher graphs/{self._map_id}/distance_modifiers.txt', norm=norm)
-        self._load_connections(f'gusher graphs/{self._map_id}/connections.txt')
+        self._load_gushers(f'maps/{self._map_id}/gushers.csv')
+        self._load_distances(f'maps/{self._map_id}/distance_modifiers.txt', norm=norm)
+        self._load_connections(f'maps/{self._map_id}/connections.txt')
         if not weights:
             # Read the weight dictionary from the first non-commented line of the file
             # https://stackoverflow.com/a/26284995
-            f = (line for line in open(f'gusher graphs/{self._map_id}/weights.txt')
+            f = (line for line in open(f'maps/{self._map_id}/weights.txt')
                  if not line.lstrip().startswith(COMMENT_CHAR))
             weights = next(f).strip()
         self._load_weights(literal_eval(weights))
@@ -132,7 +132,7 @@ class GusherMap:
     def plot(self):
         background = plt.imread(f'images/{self._map_id}.png')
         pos = {gusher['name']: tuple(gusher['coord']) for gusher in self._gushers if gusher['name'] != BASKET_LABEL}
-        pos_attrs = {node: (coord[0] - 25, coord[1] - 25) for (node, coord) in pos.items()}
+        pos_attrs = {node: (coord[0] - 40, coord[1]) for (node, coord) in pos.items()}
 
         if self._map_id in EXTENTS:
             x, y, length = EXTENTS[self._map_id]
@@ -147,7 +147,7 @@ class GusherMap:
         nx.draw_networkx(self.connections, pos,
                          node_color='#1a611b', edge_color='#35cc37', font_color='#ffffff', arrows=False)
         nx.draw_networkx_labels(self.connections, pos_attrs, labels={gusher: self.weights[gusher] for gusher in pos},
-                                font_size=10)
+                                font_weight='bold', font_color='#ff4a4a', horizontalalignment='right')
         plt.show()
 
 
@@ -167,6 +167,7 @@ def split(graph, vertex, adj=None):
 if __name__ == '__main__':
     for map_id in ('sg', 'ss', 'mb', 'lo', 'ap'):
         gusher_map = GusherMap(map_id)
+        print('-'*len(gusher_map.name))
         print(gusher_map.name)
         for node in gusher_map:
             print(f"gusher {node} (weight {gusher_map.weights[node]:g}) is adjacent to " +

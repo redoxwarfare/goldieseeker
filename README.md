@@ -1,10 +1,22 @@
 # goldieseeker
-local bio nerd pretends to be a compsci major and a salmon run expert at the same time
+A command-line tool for generating and analyzing strategies for Goldie Seeking in Salmon Run.
 
-decision tree notation: G(H, L) means open G; if G high, go to H; if G low, go to L
+Map IDs are:
+* ap -- Ark Polaris
+* lo -- Lost Outpost
+* mb -- Marooner's Bay
+* sg -- Spawning Grounds
+* ss -- Salmonid Smokeyard
 
-G* means the Goldie will never be found at G
+Run "python . -h" from within project directory for help.
 
-run "python . -h" from within project directory for help
+Documentation coming soon... hopefully?
 
-map images from [Salmon Learn](https://github.com/GungeeSpla/salmon_learn)
+### Formatting
+* Strategies are notated in the form "a(b, c)": open A, go to B if A is high, go to C if A is low
+* If a gusher is starred (e.g. a*), the Goldie will never be found in that gusher
+
+### Acknowledgements
+* Thanks to Deelatch and RR for help with search algorithm
+* Thanks to the Salmon Run server for feedback on features and UI
+* Map images from [Salmon Learn](https://github.com/GungeeSpla/salmon_learn)

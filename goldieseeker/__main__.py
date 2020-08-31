@@ -1,6 +1,6 @@
 import click
 from GusherMap import GusherMap
-from GusherNode import read_tree, write_tree
+from GusherNode import read_tree
 from getstrats import get_strat
 
 
