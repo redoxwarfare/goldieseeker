@@ -170,6 +170,7 @@ class GusherNode:
                                                 f'should be {node.name + NEVER_FIND_FLAG}')
 
             if node.high or node.low:
+                pred_new = predecessors.union(set(node.name))
                 if gusher_map:
                     neighborhood = set(gusher_map.adj(node.name))
                 else:
@@ -179,11 +180,11 @@ class GusherNode:
                 if node.high:
                     assert node.high.parent == node, f'node = {node}, node.high = {node.high}, ' \
                                                      f'node.high.parent = {node.high.parent}'
-                    recurse(node.high, predecessors.union(set(node.name)), possible_nodes.intersection(neighborhood))
+                    recurse(node.high, pred_new, possible_nodes.intersection(neighborhood))
                 if node.low:
                     assert node.low.parent == node, f'node = {node}, node.low = {node.low}, ' \
                                                     f'node.low.parent = {node.low.parent}'
-                    recurse(node.low, predecessors.union(set(node.name)), possible_nodes.difference(neighborhood))
+                    recurse(node.low, pred_new, possible_nodes.difference(neighborhood))
             else:
                 # reaching a leaf node must guarantee that the Goldie will be found
                 if possible_nodes:

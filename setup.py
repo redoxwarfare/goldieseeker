@@ -16,13 +16,14 @@ setup(
         url='https://github.com/redoxwarfare/goldieseeker',
         license='MIT',
         classifiers=[
-                'Programming Language :: Python :: 3.4',
+                'Programming Language :: Python :: 3',
                 'License :: OSI Approved :: MIT License',
                 'Development Status :: 4 - Beta'
         ],
         packages=find_packages(),
         package_data={'goldieseeker': ['maps/*.csv', 'maps/*.txt', 'images/*.png']},
         include_package_data=True,
+        python_requires='>=3.6',
         install_requires=[
                 'click',
                 'networkx',

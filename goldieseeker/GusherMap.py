@@ -160,7 +160,7 @@ def split(graph, vertex, adj=None):
     adj_subgraph = graph.subgraph(adj)  # subgraph of vertices adjacent to V
 
     non_adj = set(graph).difference(adj_subgraph)
-    non_adj = non_adj.difference(set(vertex))
+    non_adj = non_adj.difference({vertex})
     non_adj_subgraph = graph.subgraph(non_adj)  # subgraph of vertices non-adjacent to V (excluding V)
 
     return adj_subgraph, non_adj_subgraph
