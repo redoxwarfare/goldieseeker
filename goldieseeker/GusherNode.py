@@ -1,6 +1,7 @@
 from .GusherMap import BASKET_LABEL
 from copy import deepcopy
-from statistics import mean, pstdev
+from statistics import mean
+from statistics import pstdev
 from pyparsing import Regex, Forward, Suppress, Optional, Group
 
 # Flag to indicate gusher is non-findable
@@ -142,42 +143,61 @@ class GusherNode:
             self.total_latency += node.latency
             self.total_risk += node.risk
 
-    def validate(self):
+    def validate(self, gusher_map=()):
         """Check that tree is a valid strategy tree."""
-        def recurse(node, predecessors):
+        def recurse(node, predecessors, possible_nodes):
             # can't open the same gusher twice
             assert str(node) not in predecessors, f'node {node} found in own predecessors: {predecessors}'
 
+            if possible_nodes:
+                if node.name in possible_nodes:
+                    assert node.findable, f'node {node} is incorrectly marked non-findable ' \
+                                          f'(should be {node.name})'
+                    possible_nodes.remove(node.name)
+                else:
+                    assert not node.findable, f'node {node} is incorrectly marked findable ' \
+                                              f'(should be {node.name + NEVER_FIND_FLAG})'
+
             if node.high or node.low:
-                pred_new = predecessors.copy()
-                pred_new.add(str(node))
+                if gusher_map:
+                    neighborhood = set(gusher_map.adj(node.name))
+                else:
+                    neighborhood = set()
 
                 # make sure parent/child references are consistent
                 if node.high:
                     assert node.high.parent == node, f'node {node}, node.high {node.high}, ' \
                                                      f'node.high.parent {node.high.parent}'
-                    recurse(node.high, pred_new)
+                    recurse(node.high, predecessors.union(set(node.name)), possible_nodes.intersection(neighborhood))
                 if node.low:
                     assert node.low.parent == node, f'node {node}, node.low {node.high}, ' \
                                                     f'node.low.parent {node.low.parent}'
-                    recurse(node.low, pred_new)
+                    recurse(node.low, predecessors.union(set(node.name)), possible_nodes.difference(neighborhood))
             else:
                 # reaching a leaf node must guarantee that the Goldie will be found
                 assert node.findable, f'node {node} is non-findable leaf node'
-        recurse(self, set())
 
-    def report(self, gusher_map=None):
+        recurse(self, set(), set(gusher_map))
+
+    def report(self, gusher_map=None, quiet=0):
         self.update_costs(gusher_map)
+
+        short_str = write_tree(self)
+        long_str = write_instructions(self) + '\n'
+
         latencies = {str(node): node.latency for node in self.findable_nodes()}
         risks = {str(node): node.risk for node in self.findable_nodes()}
-        compact_str = write_tree(self)
-        output = '-'*len(compact_str) + '\n' + \
-                 compact_str + '\n' + \
-                 write_instructions(self) + '\n' + \
-                 f"times: {{{', '.join(f'{node}: {time:0.2f}' for node, time in sorted(latencies.items()))}}}\n"\
-                 f"'risks: {{{', '.join(f'{node}: {risk:0.2f}' for node, risk in sorted(risks.items()))}}}\n"\
-                 f"avg. time: {mean(latencies.values()):0.2f} +/- {pstdev(latencies.values()):0.2f}\n"\
-                 f"avg. risk: {mean(risks.values()):0.2f} +/- {pstdev(risks.values()):0.2f}"
+        cost_long = f"times: {{{', '.join(f'{node}: {time:0.2f}' for node, time in sorted(latencies.items()))}}}\n"\
+                    f"risks: {{{', '.join(f'{node}: {risk:0.2f}' for node, risk in sorted(risks.items()))}}}\n"
+        cost_short = f"avg. time: {mean(latencies.values()):0.2f} +/- {pstdev(latencies.values()):0.2f}\n"\
+                     f"avg. risk: {mean(risks.values()):0.2f} +/- {pstdev(risks.values()):0.2f}"
+
+        output = short_str
+        if quiet < 3:
+            output = '-'*len(short_str) + '\n' + output + '\n'
+            if quiet < 2:
+                output += long_str + cost_long
+            output += cost_short
         return output
 
 

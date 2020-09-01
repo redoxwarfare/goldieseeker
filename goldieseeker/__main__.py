@@ -19,26 +19,30 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
               help="""\b
               Evaluate a user-specified strategy.
               example: -E "f(d(b, g), e(c, a))"
-              "a(b, c)" means "if a is high, open b, and if a is low, open c\"""")
+              "a(b, c)" means "if A is high, open B, and if A is low, open C\"""")
 @click.option('--weights', '-W', type=str,
               help="""\b
               Specify custom gusher weights in dictionary format.
               example: -W "{'d': 4, 'bef': 2, '.': 1}"
               This gives a weight of 4 to gusher D, a weight of 2 to gushers B, E, and F, """
               "and a weight of 1 to the rest.")
-@click.option('--suppress', '-s', is_flag=True,
-              help="Don't show the plot of the map.")
+@click.option('--quiet', '-q', count=True,
+              help="""\b
+              Don't show the map plot.
+              Use '-qq' to also suppress reporting strategy details.
+              Use '-qqq' to only output the string representation of the strategy tree.""")
 @click.option('--debug', '-d', is_flag=True,
               help="Print internal process of search algorithm.")
-def main(map_id, weights, tuning, strategy_str, suppress, debug):
+def main(map_id, weights, tuning, strategy_str, quiet, debug):
     """For a given map, generate a Goldie Seeking strategy or evaluate a user-specified strategy."""
     gusher_map = GusherMap(map_id, weights=weights)
     if strategy_str:
         strat = read_tree(strategy_str, gusher_map)
+        strat.validate(gusher_map)  # TODO -- catch AssertionErrors and suggest corrections
     else:
         strat = get_strat(gusher_map, tuning=tuning, debug=debug)
-    click.echo(strat.report(gusher_map))
-    if not suppress:
+    click.echo(strat.report(gusher_map, quiet=quiet))
+    if quiet < 1:
         gusher_map.plot()
 
 
