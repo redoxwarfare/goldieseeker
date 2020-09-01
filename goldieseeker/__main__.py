@@ -36,7 +36,9 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
               help="Print internal process of search algorithm.")
 @click.version_option(__version__, '--version', '-v', prog_name="goldieseeker")
 def main(map_id, weights, tuning, strategy_str, quiet, debug):
-    """For a given map, generate a Goldie Seeking strategy or evaluate a user-specified strategy."""
+    """\b
+    For a given map, generate a Goldie Seeking strategy or evaluate a user-specified strategy.
+    To customize default distances and weights, edit the corresponding files in goldieseeker/maps/[MAP_ID]."""
     gusher_map = GusherMap(map_id, weights=weights)
     if strategy_str:
         strat = read_tree(strategy_str, gusher_map)

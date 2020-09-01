@@ -9,9 +9,9 @@ Map IDs:
 * ss - Salmonid Smokeyard
 
 ### How to Use
-You can install goldieseeker with pip using the command `pip install goldieseeker`, then run `gseek [map_id]` using one of the above map IDs. Run `gseek --help` to see all the other options and features. For more customization, you can edit the files in the maps folder.
+You can install goldieseeker with pip using the command `pip install goldieseeker`, then run `gseek [map_id]` using one of the above map IDs. Run `gseek --help` to see all the other options and features. For more customization, you can edit the files in the `goldieseeker/maps` folder. (This should be located wherever you installed the package.)
 
-Requires Python 3.6 or higher. 
+Requires Python 3.6 or higher.
 
 More extensive documentation coming soon... hopefully?
 
