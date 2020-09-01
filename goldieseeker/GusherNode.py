@@ -36,7 +36,16 @@ class GusherNode:
         return self.name + (NEVER_FIND_FLAG if not self.findable else "")
 
     def __repr__(self):
-        return write_tree(self) + f'; time: {self.total_latency}, risk: {self.total_risk}}}'
+        parent = str(self.parent) if self.parent else BASKET_LABEL
+        repr_str = f'{parent}-->{self}'
+        if self.high and self.low:
+            repr_str += f'({self.high}, {self.low})'
+        elif self.high:
+            repr_str += f'({self.high},)'
+        elif self.low:
+            repr_str += f'({self.low},)'
+        return repr_str
+        # return write_tree(self)  + f'; time: {self.total_latency}, risk: {self.total_risk}}}'
 
     def __iter__(self):
         yield self
@@ -147,16 +156,18 @@ class GusherNode:
         """Check that tree is a valid strategy tree."""
         def recurse(node, predecessors, possible_nodes):
             # can't open the same gusher twice
-            assert str(node) not in predecessors, f'node {node} found in own predecessors: {predecessors}'
+            if str(node) in predecessors:
+                raise ValidationError(node, f'gusher {node} already in set of opened gushers: {predecessors}')
 
             if possible_nodes:
                 if node.name in possible_nodes:
-                    assert node.findable, f'node {node} is incorrectly marked non-findable ' \
-                                          f'(should be {node.name})'
                     possible_nodes.remove(node.name)
-                else:
-                    assert not node.findable, f'node {node} is incorrectly marked findable ' \
-                                              f'(should be {node.name + NEVER_FIND_FLAG})'
+                    if not node.findable:
+                        raise ValidationError(node, f'gusher {node} is incorrectly marked non-findable, '
+                                                    f'should be {node.name}')
+                elif node.name not in possible_nodes and node.findable:
+                    raise ValidationError(node, f'gusher {node} is incorrectly marked findable, '
+                                                f'should be {node.name + NEVER_FIND_FLAG}')
 
             if node.high or node.low:
                 if gusher_map:
@@ -166,16 +177,18 @@ class GusherNode:
 
                 # make sure parent/child references are consistent
                 if node.high:
-                    assert node.high.parent == node, f'node {node}, node.high {node.high}, ' \
-                                                     f'node.high.parent {node.high.parent}'
+                    assert node.high.parent == node, f'node = {node}, node.high = {node.high}, ' \
+                                                     f'node.high.parent = {node.high.parent}'
                     recurse(node.high, predecessors.union(set(node.name)), possible_nodes.intersection(neighborhood))
                 if node.low:
-                    assert node.low.parent == node, f'node {node}, node.low {node.high}, ' \
-                                                    f'node.low.parent {node.low.parent}'
+                    assert node.low.parent == node, f'node = {node}, node.low = {node.low}, ' \
+                                                    f'node.low.parent = {node.low.parent}'
                     recurse(node.low, predecessors.union(set(node.name)), possible_nodes.difference(neighborhood))
             else:
                 # reaching a leaf node must guarantee that the Goldie will be found
-                assert node.findable, f'node {node} is non-findable leaf node'
+                if possible_nodes:
+                    raise ValidationError(node, f'Goldie could still be in gushers {possible_nodes} '
+                                                f'after opening gusher {node}')
 
         recurse(self, set(), set(gusher_map))
 
@@ -201,6 +214,12 @@ class GusherNode:
         return output
 
 
+# Custom exception for invalid strategy trees
+class ValidationError(Exception):
+    def __init__(self, node, message):
+        super().__init__(node, message)
+
+
 def write_tree(root):
     """Write the strategy encoded by the subtree rooted at 'root' in modified Newick format.
     V(H, L) represents the tree with root node V, high subtree H, and low subtree L.
@@ -216,7 +235,7 @@ def write_tree(root):
         return f'{root}'
 
 
-# Decision tree grammar
+# Strategy tree grammar
 node = Regex(rf'\w+[{NEVER_FIND_FLAG}]?')
 LPAREN, COMMA, RPAREN = map(Suppress, '(,)')
 tree = Forward()
@@ -234,24 +253,31 @@ def read_tree(tree_str, gusher_map, start=BASKET_LABEL):
     def build_tree(tokens):  # recursively convert ParseResults object into GusherNode tree
         findable = tokens.root[-1] is not NEVER_FIND_FLAG
         rootname = tokens.root.rstrip(NEVER_FIND_FLAG)
-        root = GusherNode(rootname, gusher_map=gusher_map, findable=findable)
-        if tokens.high or tokens.low:
-            high, low = None, None
-            dist_h, dist_l = 1, 1
-            if tokens.high:
-                high = build_tree(tokens.high)
-                if gusher_map:
-                    dist_h = gusher_map.distance(rootname, high.name)
-            if tokens.low:
-                low = build_tree(tokens.low)
-                if gusher_map:
-                    dist_l = gusher_map.distance(rootname, low.name)
-            root.add_children(high=high, low=low, dist_h=dist_h, dist_l=dist_l)
-        return root
+        try:
+            root = GusherNode(rootname, gusher_map=gusher_map, findable=findable)
+        except KeyError as err:
+            raise ValueError(f"Couldn't find gusher {err}!") from None
+        else:
+            if tokens.high or tokens.low:
+                high, low = None, None
+                dist_h, dist_l = 1, 1
+                if tokens.high:
+                    high = build_tree(tokens.high)
+                    try:
+                        dist_h = gusher_map.distance(rootname, high.name)
+                    except KeyError:
+                        raise ValueError(f"No connection between {rootname} and {high.name}!") from None
+                if tokens.low:
+                    low = build_tree(tokens.low)
+                    try:
+                        dist_l = gusher_map.distance(rootname, low.name)
+                    except KeyError:
+                        raise ValueError(f"No connection between {rootname} and {low.name}!") from None
+                root.add_children(high=high, low=low, dist_h=dist_h, dist_l=dist_l)
+            return root
 
     tokens = tree.parseString(tree_str)
     root = build_tree(tokens)
-
     root.calc_tree_score(gusher_map, start)
     return root
 

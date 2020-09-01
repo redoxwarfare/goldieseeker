@@ -21,12 +21,12 @@ EXTENTS = {'ap': (660, 300, 760),
 
 class GusherMap:
     def __init__(self, map_id, weights=None, norm=2):
-        self._map_id = map_id
+        self.map_id = map_id
         self._pkg_dir = pathlib.Path(__file__).parent.resolve()
         self.load(weights=weights, norm=norm)
 
     def load(self, weights=None, norm=2):
-        path = self._pkg_dir/f'maps/{self._map_id}/'
+        path = self._pkg_dir/f'maps/{self.map_id}/'
         self._load_gushers(str(path/'gushers.csv'))
         self._load_distances(str(path/'distance_modifiers.txt'), norm=norm)
         self._load_connections(str(path/'connections.txt'))
@@ -132,12 +132,12 @@ class GusherMap:
         return self.connections.degree[vertex]
 
     def plot(self):
-        background = plt.imread(str(self._pkg_dir/f'images/{self._map_id}.png'))
+        background = plt.imread(str(self._pkg_dir/f'images/{self.map_id}.png'))
         pos = {gusher['name']: tuple(gusher['coord']) for gusher in self._gushers if gusher['name'] != BASKET_LABEL}
         pos_attrs = {node: (coord[0] - 40, coord[1]) for (node, coord) in pos.items()}
 
-        if self._map_id in EXTENTS:
-            x, y, length = EXTENTS[self._map_id]
+        if self.map_id in EXTENTS:
+            x, y, length = EXTENTS[self.map_id]
             extent = [x, x+length, y+length, y]
             background = background[y:y+length, x:x+length]
         else:

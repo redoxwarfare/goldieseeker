@@ -38,9 +38,10 @@ def main(map_id, weights, tuning, strategy_str, quiet, debug):
     gusher_map = GusherMap(map_id, weights=weights)
     if strategy_str:
         strat = read_tree(strategy_str, gusher_map)
-        strat.validate(gusher_map)  # TODO -- catch AssertionErrors and suggest corrections
+        strat.validate(gusher_map)  # TODO -- catch ValidationErrors and suggest corrections
     else:
         strat = get_strat(gusher_map, tuning=tuning, debug=debug)
+        # strat.validate(gusher_map)
     click.echo(strat.report(gusher_map, quiet=quiet))
     if quiet < 1:
         gusher_map.plot()
