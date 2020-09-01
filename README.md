@@ -1,16 +1,19 @@
 # goldieseeker
 A command-line tool for generating and analyzing strategies for Goldie Seeking in Salmon Run.
 
-Map IDs are:
-* ap -- Ark Polaris
-* lo -- Lost Outpost
-* mb -- Marooner's Bay
-* sg -- Spawning Grounds
-* ss -- Salmonid Smokeyard
+Map IDs:
+* ap - Ark Polaris
+* lo - Lost Outpost
+* mb - Marooner's Bay
+* sg - Spawning Grounds
+* ss - Salmonid Smokeyard
 
-Run "python -m goldieseeker --help" from within project directory for help.
+### How to Use
+You can install goldieseeker with pip using the command `pip install goldieseeker`, then run `gseek [map_id]` using one of the above map IDs. Run `gseek --help` to see all the other options and features. For more customization, you can edit the files in the maps folder.
 
-Documentation coming soon... hopefully?
+Requires Python 3.6 or higher. 
+
+More extensive documentation coming soon... hopefully?
 
 ### Formatting
 * Strategies are notated in the form "a(b, c)": open A, go to B if A is high, go to C if A is low
