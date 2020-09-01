@@ -1,4 +1,5 @@
 import click
+from . import __version__
 from .GusherMap import GusherMap
 from .GusherNode import read_tree
 from .strats import get_strat
@@ -33,6 +34,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
               Use '-qqq' to only output the string representation of the strategy tree.""")
 @click.option('--debug', '-d', is_flag=True,
               help="Print internal process of search algorithm.")
+@click.version_option(__version__, '--version', '-v', prog_name="goldieseeker")
 def main(map_id, weights, tuning, strategy_str, quiet, debug):
     """For a given map, generate a Goldie Seeking strategy or evaluate a user-specified strategy."""
     gusher_map = GusherMap(map_id, weights=weights)

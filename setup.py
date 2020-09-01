@@ -1,14 +1,22 @@
 from setuptools import setup, find_packages
 import pathlib
+import re
 
 # Grab contents of README
 # https://realpython.com/pypi-publish-python-package/#configuring-your-package
 HERE = pathlib.Path(__file__).parent
 README = (HERE/'README.md').read_text()
 
+# https://stackoverflow.com/a/41110107
+INIT = (HERE/'goldieseeker/__init__.py').read_text()
+def get_from_init(property):
+    result = re.search(fr'{property}\s*=\s*[\'"]([^\'"]*)[\'"]', INIT)
+    return result.group(1)
+
+
 setup(
         name='goldieseeker',
-        version='0.1',
+        version=get_from_init('__version__'),
         description='A command-line tool for generating and evaluating Goldie Seeking strategies',
         long_description=README,
         long_description_content_type='text/markdown',
