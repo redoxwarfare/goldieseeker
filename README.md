@@ -8,7 +8,7 @@ Map IDs are:
 * sg -- Spawning Grounds
 * ss -- Salmonid Smokeyard
 
-Run "python . -h" from within project directory for help.
+Run "python -m goldieseeker --help" from within project directory for help.
 
 Documentation coming soon... hopefully?
 
