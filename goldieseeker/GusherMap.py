@@ -4,14 +4,12 @@ from ast import literal_eval
 from numpy import genfromtxt
 from scipy.spatial import distance_matrix
 import matplotlib.pyplot as plt
-from string import ascii_letters
 import warnings
 
 # Special characters for parsing files
 COMMENT_CHAR = '#'
 DEFAULT_CHAR = '.'
 BASKET_LABEL = '@'
-GUSHER_LABELS = BASKET_LABEL + ascii_letters
 
 # Constants for plotting graphs
 EXTENTS = {'ap': (660, 300, 760),
