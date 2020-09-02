@@ -20,26 +20,36 @@ EXTENTS = {'ap': (660, 300, 760),
 
 
 class GusherMap:
-    def __init__(self, map_id, weights=None, norm=2):
+    def __init__(self, map_id, all_distances=None, weights=None, norm=2):
         self.map_id = map_id
-        self._pkg_dir = pathlib.Path(__file__).parent.resolve()
-        self.load(weights=weights, norm=norm)
+        self._path = pathlib.Path(__file__).parent.resolve() / f'maps/{map_id}'
+        self.load(all_distances=all_distances, weights=weights, norm=norm)
 
-    def load(self, weights=None, norm=2):
-        path = self._pkg_dir/f'maps/{self.map_id}/'
-        self._load_gushers(str(path/'gushers.csv'))
-        self._load_distances(str(path/'distance_modifiers.txt'), norm=norm)
-        self._load_connections(str(path/'connections.txt'))
+    def load(self, all_distances=None, weights=None, norm=2):
+        self._load_gushers(str(self._path/'gushers.csv'))
+        if all_distances:
+            self._load_distances_all_equal(list(self._gushers['name']), all_distances)
+        else:
+            self._load_distances(str(self._path/'distance_modifiers.txt'), norm=norm)
+        self._validate_distances()
+        self._load_connections(str(self._path/'connections.txt'))
         if not weights:
             # Read the weight dictionary from the first non-commented line of the file
             # https://stackoverflow.com/a/26284995
-            f = (line for line in open(str(path/'weights.txt'))
+            f = (line for line in open(str(self._path/'weights.txt'))
                  if not line.lstrip().startswith(COMMENT_CHAR))
             weights = next(f).strip()
         self._load_weights(literal_eval(weights))
 
     def _load_gushers(self, filename):
         self._gushers = genfromtxt(filename, delimiter=',', names=['name', 'coord'], dtype=['U8', '2u4'])
+
+    def _load_distances_all_equal(self, nodes, all_distances=1):
+        self.distances = nx.complete_graph(nodes, create_using=nx.DiGraph)
+        edge_list = [(BASKET_LABEL, node) for node in self.distances]
+        self.distances.add_node(BASKET_LABEL)
+        self.distances.add_edges_from(edge_list)
+        nx.set_edge_attributes(self.distances, all_distances, name='weight')
 
     def _load_distances(self, filename, norm=2):
         coords = self._gushers['coord']
@@ -49,13 +59,14 @@ class GusherMap:
             adjacency_matrix += distance_modifiers
         except ValueError as e:
             warnings.warn(f"Couldn't read distance modifiers from '{filename}'\n" + str(e))
-
         self.distances = nx.from_numpy_array(adjacency_matrix, create_using=nx.DiGraph)
         # noinspection PyTypeChecker
         nx.relabel_nodes(self.distances, lambda i: self._gushers['name'][i], False)
+
+    def _validate_distances(self):
         violations = self._find_triangle_inequality_violations()
         if violations:
-            warnings.warn(f"Distances matrix in '{filename}' does not satisfy triangle inequality:\n" +
+            warnings.warn(f"Distances matrix for map '{self.map_id}' does not satisfy triangle inequality:\n" +
                           ''.join(f"    {t[0]}->{t[1]}->{t[2]} ({t[3]:g}) is shorter than {t[0]}->{t[2]} ({t[4]}:g)\n"
                                   for t in violations))
 
@@ -67,11 +78,7 @@ class GusherMap:
         # If _load_distances failed, generate complete digraph from connections graph
         # may no longer be necessary?
         if not self.distances:
-            self.distances = nx.complete_graph(connections_raw.nodes, create_using=nx.DiGraph)
-            edge_list = [(BASKET_LABEL, node) for node in self.distances]
-            self.distances.add_node(BASKET_LABEL)
-            self.distances.add_edges_from(edge_list)
-            nx.set_edge_attributes(self.distances, 1, name='weight')
+            self._load_distances_all_equal(connections_raw.nodes, 1)
         else:
             conn_size = len(connections_raw)
             dist_size = len(self.distances)
@@ -132,7 +139,7 @@ class GusherMap:
         return self.connections.degree[vertex]
 
     def plot(self):
-        background = plt.imread(str(self._pkg_dir/f'images/{self.map_id}.png'))
+        background = plt.imread(str(self._path.parent.parent.resolve()/f'images/{self.map_id}.png'))
         pos = {gusher['name']: tuple(gusher['coord']) for gusher in self._gushers if gusher['name'] != BASKET_LABEL}
         pos_attrs = {node: (coord[0] - 40, coord[1]) for (node, coord) in pos.items()}
 

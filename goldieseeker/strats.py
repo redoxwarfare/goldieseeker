@@ -39,17 +39,17 @@ def get_strat_greedy(gusher_map):
     return recurse(gusher_map.connections)
 
 
-def get_strat(gushers, start=BASKET_LABEL, tuning=0.5, distances=True, weights=True, debug=False):
+def get_strat(gushers, start=BASKET_LABEL, tuning=0.5, all_distances=None, all_weights=None, debug=False):
     """Build the optimal decision tree for a gusher map. Memoized algorithm."""
     def print_log(*args, **kwargs):
         if debug:
             print(*args, **kwargs)
 
     def distance(start, end):
-        return gushers.distance(start, end) if distances else 1
+        return all_distances if all_distances else gushers.distance(start, end)
 
     def weight(vertex):
-        return gushers.weight(vertex) if weights else 1
+        return all_weights if all_weights else gushers.weight(vertex)
 
     def score(latency, risk):
         return tuning*risk + (1-tuning)*latency

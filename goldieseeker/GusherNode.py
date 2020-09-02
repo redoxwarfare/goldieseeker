@@ -152,7 +152,7 @@ class GusherNode:
             self.total_latency += node.latency
             self.total_risk += node.risk
 
-    def validate(self, gusher_map=()):
+    def validate(self, gusher_map=None):
         """Check that tree is a valid strategy tree."""
         def recurse(node, predecessors, possible_nodes):
             # can't open the same gusher twice
@@ -191,7 +191,7 @@ class GusherNode:
                     raise ValidationError(node, f'Goldie could still be in gushers {possible_nodes} '
                                                 f'after opening gusher {node}')
 
-        recurse(self, set(), set(gusher_map))
+        recurse(self, set(), set(gusher_map) if gusher_map else set())
 
     def report(self, gusher_map=None, quiet=0):
         self.update_costs(gusher_map)
