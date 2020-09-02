@@ -8,6 +8,7 @@ from pyparsing import Regex, Forward, Suppress, Optional, Group
 NEVER_FIND_FLAG = '*'
 
 
+# TODO - replace node.high and node.low with node.children = namedtuple(high=..., low=...)
 class GusherNode:
     def __init__(self, name, gusher_map=None, findable=True):
         self.name = name

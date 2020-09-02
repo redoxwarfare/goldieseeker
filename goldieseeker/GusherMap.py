@@ -2,7 +2,7 @@ import pathlib
 import networkx as nx
 from ast import literal_eval
 from numpy import genfromtxt
-from scipy.spatial import distance_matrix
+from scipy.spatial.distance import cdist
 import matplotlib.pyplot as plt
 import warnings
 
@@ -10,6 +10,8 @@ import warnings
 COMMENT_CHAR = '#'
 DEFAULT_CHAR = '.'
 BASKET_LABEL = '@'
+
+DISTANCE_SCALE_FACTOR = 32*4
 
 # Constants for plotting graphs
 EXTENTS = {'ap': (660, 300, 760),
@@ -19,18 +21,17 @@ EXTENTS = {'ap': (660, 300, 760),
            'ss': (363, 526, 720)}
 
 
+# noinspection PyTypeChecker,PyTypeChecker
 class GusherMap:
     def __init__(self, map_id, all_distances=None, weights=None, norm=2):
         self.map_id = map_id
         self._path = pathlib.Path(__file__).parent.resolve() / f'maps/{map_id}'
-        self.load(all_distances=all_distances, weights=weights, norm=norm)
 
-    def load(self, all_distances=None, weights=None, norm=2):
         self._load_gushers(str(self._path/'gushers.csv'))
         if all_distances:
-            self._load_distances_all_equal(list(self._gushers['name']), all_distances)
+            self._load_distances_all_equal(list(self._gushers['name'][1:]), all_distances, norm)
         else:
-            self._load_distances(str(self._path/'distance_modifiers.txt'), norm=norm)
+            self._load_distances(str(self._path/'distance_modifiers.txt'), norm)
         self._validate_distances()
         self._load_connections(str(self._path/'connections.txt'))
         if not weights:
@@ -44,16 +45,20 @@ class GusherMap:
     def _load_gushers(self, filename):
         self._gushers = genfromtxt(filename, delimiter=',', names=['name', 'coord'], dtype=['U8', '2u4'])
 
-    def _load_distances_all_equal(self, nodes, all_distances=1):
+    def _load_distances_all_equal(self, nodes, all_distances=1, norm=2):
         self.distances = nx.complete_graph(nodes, create_using=nx.DiGraph)
-        edge_list = [(BASKET_LABEL, node) for node in self.distances]
-        self.distances.add_node(BASKET_LABEL)
-        self.distances.add_edges_from(edge_list)
         nx.set_edge_attributes(self.distances, all_distances, name='weight')
+        # Use real distances for outgoing edges from the basket
+        basket_distances = cdist(self._gushers['coord'][0].reshape(1, 2),
+                                 self._gushers['coord'][1:],
+                                 metric='minkowski', p=norm) / DISTANCE_SCALE_FACTOR
+        edge_list = [(BASKET_LABEL, self._gushers['name'][i+1], basket_distances[0][i]) for i in range(len(nodes))]
+        self.distances.add_node(BASKET_LABEL)
+        self.distances.add_weighted_edges_from(edge_list)
 
     def _load_distances(self, filename, norm=2):
         coords = self._gushers['coord']
-        adjacency_matrix = distance_matrix(coords, coords, p=norm) / (32*4)
+        adjacency_matrix = cdist(coords, coords, 'minkowski', p=norm) / DISTANCE_SCALE_FACTOR
         try:
             distance_modifiers = genfromtxt(filename, delimiter=',', comments=COMMENT_CHAR)
             adjacency_matrix += distance_modifiers

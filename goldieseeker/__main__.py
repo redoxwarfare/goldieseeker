@@ -40,7 +40,7 @@ maps = [f.name for f in scandir(HERE/'maps/') if f.is_dir()]
               help="""\b
               Turn on "squad" mode (experimental).
               This tells the seeking algorithm to assume that opening any gusher always takes the same amount of time.
-              (Internally, the distance between every pair of gushers is set to 1.)""")
+              (Internally, the distance between every pair of gushers is set to 3.)""")
 @click.option('--quiet', '-q', count=True,
               help="""\b
               Don't show the map plot.
@@ -54,9 +54,9 @@ def main(map_id, weights, tuning, strategy_str, squad, quiet, debug):
     For a given map, generate a Goldie Seeking strategy or evaluate a user-specified strategy.
     To customize default distances and weights, edit the corresponding files in goldieseeker/maps/[MAP_ID]."""
     try:
-        gusher_map = GusherMap(map_id, weights=weights, all_distances=1 if squad else None)
+        gusher_map = GusherMap(map_id, weights=weights, all_distances=3 if squad else None)
     except IOError as err:
-        click.echo(f"Couldn't load '{map_id}'!", err=True)
+        click.echo(f"Couldn't load map '{map_id}'!", err=True)
         click.echo(str(err), err=True)
     else:
         if strategy_str:
