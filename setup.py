@@ -9,8 +9,10 @@ README = (HERE/'README.md').read_text()
 
 # https://stackoverflow.com/a/41110107
 INIT = (HERE/'goldieseeker/__init__.py').read_text()
-def get_from_init(property):
-    result = re.search(fr'{property}\s*=\s*[\'"]([^\'"]*)[\'"]', INIT)
+
+
+def get_from_init(var):
+    result = re.search(fr'{var}\s*=\s*[\'"]([^\'"]*)[\'"]', INIT)
     return result.group(1)
 
 
