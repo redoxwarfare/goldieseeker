@@ -4,7 +4,7 @@ import re
 
 # Grab contents of README
 # https://realpython.com/pypi-publish-python-package/#configuring-your-package
-HERE = pathlib.Path(__file__).parent
+HERE = pathlib.Path(__file__).parent.resolve()
 README = (HERE/'README.md').read_text()
 
 # https://stackoverflow.com/a/41110107

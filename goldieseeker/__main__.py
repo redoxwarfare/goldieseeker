@@ -1,4 +1,6 @@
 import click
+import pathlib
+from os import scandir
 from . import __version__
 from .GusherMap import GusherMap
 from .GusherNode import read_tree
@@ -7,11 +9,18 @@ from .strats import get_strat
 
 # TODO - start compilation of strategy variants for each gushers
 
+# Settings for Click
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+
+# Get list of available map IDs
+HERE = pathlib.Path(__file__).parent.resolve()
+maps = [f.name for f in scandir(HERE/'maps/') if f.is_dir()]
 
 
 @click.command(context_settings=CONTEXT_SETTINGS)
-@click.argument('map_id')
+@click.option('--map', '-m', 'map_id', required=True,
+              type=click.Choice(maps, case_sensitive=False),
+              help="""Map ID. Must be the name of a folder in 'goldieseeker/maps'.""")
 @click.option('--tuning', '-t', type=click.FloatRange(0, 1), default=0.5,
               help="""\b
               Set the seeking algorithm's tuning factor (range between 0-1).
@@ -39,16 +48,21 @@ def main(map_id, weights, tuning, strategy_str, quiet, debug):
     """\b
     For a given map, generate a Goldie Seeking strategy or evaluate a user-specified strategy.
     To customize default distances and weights, edit the corresponding files in goldieseeker/maps/[MAP_ID]."""
-    gusher_map = GusherMap(map_id, weights=weights)
-    if strategy_str:
-        strat = read_tree(strategy_str, gusher_map)
-        strat.validate(gusher_map)  # TODO -- catch ValidationErrors and suggest corrections
+    try:
+        gusher_map = GusherMap(map_id, weights=weights)
+    except IOError as err:
+        click.echo(f"Couldn't load '{map_id}'!", err=True)
+        click.echo(str(err), err=True)
     else:
-        strat = get_strat(gusher_map, tuning=tuning, debug=debug)
-        # strat.validate(gusher_map)
-    click.echo(strat.report(gusher_map, quiet=quiet))
-    if quiet < 1:
-        gusher_map.plot()
+        if strategy_str:
+            strat = read_tree(strategy_str, gusher_map)
+            strat.validate(gusher_map)  # TODO -- catch ValidationErrors and suggest corrections
+        else:
+            strat = get_strat(gusher_map, tuning=tuning, debug=debug)
+            # strat.validate(gusher_map)
+        click.echo(strat.report(gusher_map, quiet=quiet))
+        if quiet < 1:
+            gusher_map.plot()
 
 
 if __name__ == '__main__':
