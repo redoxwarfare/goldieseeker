@@ -1,7 +1,7 @@
 import pathlib
 import networkx as nx
 from ast import literal_eval
-from numpy import genfromtxt
+from numpy import genfromtxt, minimum
 from scipy.spatial.distance import cdist
 import matplotlib.pyplot as plt
 import warnings
@@ -23,15 +23,12 @@ EXTENTS = {'ap': (660, 300, 760),
 
 # noinspection PyTypeChecker,PyTypeChecker
 class GusherMap:
-    def __init__(self, map_id, all_distances=None, weights=None, norm=2):
+    def __init__(self, map_id, weights=None, squad=False, norm=2):
         self.map_id = map_id
         self._path = pathlib.Path(__file__).parent.resolve() / f'maps/{map_id}'
 
         self._load_gushers(str(self._path/'gushers.csv'))
-        if all_distances:
-            self._load_distances_all_equal(list(self._gushers['name'][1:]), all_distances, norm)
-        else:
-            self._load_distances(str(self._path/'distance_modifiers.txt'), norm)
+        self._load_distances(str(self._path/'distance_modifiers.txt'), squad, norm)
         self._validate_distances()
         self._load_connections(str(self._path/'connections.txt'))
         if not weights:
@@ -45,6 +42,22 @@ class GusherMap:
     def _load_gushers(self, filename):
         self._gushers = genfromtxt(filename, delimiter=',', names=['name', 'coord'], dtype=['U8', '2u4'])
 
+    def _load_distances(self, filename, squad=False, norm=2):
+        coords = self._gushers['coord']
+        adjacency_matrix = cdist(coords, coords, 'minkowski', p=norm) / DISTANCE_SCALE_FACTOR
+        try:
+            distance_modifiers = genfromtxt(filename, delimiter=',', comments=COMMENT_CHAR)
+            adjacency_matrix += distance_modifiers
+            if squad:
+                # Assume that it never takes longer to reach a gusher than it would have taken coming from basket/spawn
+                adjacency_matrix = minimum(adjacency_matrix, adjacency_matrix[0, :])
+        except ValueError as e:
+            warnings.warn(f"Couldn't read distance modifiers from '{filename}'\n" + str(e))
+        self.distances = nx.from_numpy_array(adjacency_matrix, create_using=nx.DiGraph)
+        # noinspection PyTypeChecker
+        nx.relabel_nodes(self.distances, lambda i: self._gushers['name'][i], False)
+
+    # May not be necessary
     def _load_distances_all_equal(self, nodes, all_distances=1, norm=2):
         self.distances = nx.complete_graph(nodes, create_using=nx.DiGraph)
         nx.set_edge_attributes(self.distances, all_distances, name='weight')
@@ -55,18 +68,6 @@ class GusherMap:
         edge_list = [(BASKET_LABEL, self._gushers['name'][i+1], basket_distances[0][i]) for i in range(len(nodes))]
         self.distances.add_node(BASKET_LABEL)
         self.distances.add_weighted_edges_from(edge_list)
-
-    def _load_distances(self, filename, norm=2):
-        coords = self._gushers['coord']
-        adjacency_matrix = cdist(coords, coords, 'minkowski', p=norm) / DISTANCE_SCALE_FACTOR
-        try:
-            distance_modifiers = genfromtxt(filename, delimiter=',', comments=COMMENT_CHAR)
-            adjacency_matrix += distance_modifiers
-        except ValueError as e:
-            warnings.warn(f"Couldn't read distance modifiers from '{filename}'\n" + str(e))
-        self.distances = nx.from_numpy_array(adjacency_matrix, create_using=nx.DiGraph)
-        # noinspection PyTypeChecker
-        nx.relabel_nodes(self.distances, lambda i: self._gushers['name'][i], False)
 
     def _validate_distances(self):
         violations = self._find_triangle_inequality_violations()
@@ -80,16 +81,11 @@ class GusherMap:
         with open(filename) as f:
             self.name = f.readline().strip(COMMENT_CHAR + ' \n')
         connections_raw = nx.read_adjlist(filename, comments=COMMENT_CHAR)
-        # If _load_distances failed, generate complete digraph from connections graph
-        # may no longer be necessary?
-        if not self.distances:
-            self._load_distances_all_equal(connections_raw.nodes, 1)
-        else:
-            conn_size = len(connections_raw)
-            dist_size = len(self.distances)
-            assert dist_size == conn_size + 1, f"Couldn't read {filename}\n" + \
-                                               f"Distances matrix is {dist_size}x{dist_size} " + \
-                                               f"but connections graph has {conn_size} vertices"
+        conn_size = len(connections_raw)
+        dist_size = len(self.distances)
+        assert dist_size == conn_size + 1, f"Couldn't read {filename}\n" + \
+                                           f"Distances matrix is {dist_size}x{dist_size} " + \
+                                           f"but connections graph has {conn_size} vertices"
         self.connections = self.distances.edge_subgraph(connections_raw.to_directed(as_view=True).edges)
         # There's probably some way to induce a subgraph of 'distances' by reading edges directly from connections.txt,
         #   but I'm too lazy to figure out what that is

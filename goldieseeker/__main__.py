@@ -25,6 +25,11 @@ maps = [f.name for f in scandir(HERE/'maps/') if f.is_dir()]
               help="""\b
               Set the seeking algorithm's tuning factor (range between 0-1).
               0: fastest time, 1: lowest risk""")
+@click.option('--squad', '-s', is_flag=True,
+              help="""\b
+              Turn on "squad" mode (experimental).
+              This tells the seeking algorithm to assume that traveling to a gusher never takes longer than it would 
+              take when coming from spawn (i.e. the basket).""")
 @click.option('--eval', '-E', 'strategy_str', type=str,
               help="""\b
               Evaluate a user-specified strategy.
@@ -36,11 +41,6 @@ maps = [f.name for f in scandir(HERE/'maps/') if f.is_dir()]
               example: -W "{'d': 4, 'bef': 2, '.': 1}"
               This gives a weight of 4 to gusher D, a weight of 2 to gushers B, E, and F, """
               "and a weight of 1 to the rest.")
-@click.option('--squad', is_flag=True,
-              help="""\b
-              Turn on "squad" mode (experimental).
-              This tells the seeking algorithm to assume that opening any gusher always takes the same amount of time.
-              (Internally, the distance between every pair of gushers is set to 3.)""")
 @click.option('--quiet', '-q', count=True,
               help="""\b
               Don't show the map plot.
@@ -49,12 +49,12 @@ maps = [f.name for f in scandir(HERE/'maps/') if f.is_dir()]
 @click.option('--debug', '-d', is_flag=True,
               help="Print internal process of search algorithm.")
 @click.version_option(__version__, '--version', '-v', prog_name="goldieseeker")
-def main(map_id, weights, tuning, strategy_str, squad, quiet, debug):
+def main(map_id, tuning, squad, strategy_str, weights, quiet, debug):
     """\b
     For a given map, generate a Goldie Seeking strategy or evaluate a user-specified strategy.
     To customize default distances and weights, edit the corresponding files in goldieseeker/maps/[MAP_ID]."""
     try:
-        gusher_map = GusherMap(map_id, weights=weights, all_distances=3 if squad else None)
+        gusher_map = GusherMap(map_id, weights=weights, squad=squad)
     except IOError as err:
         click.echo(f"Couldn't load map '{map_id}'!", err=True)
         click.echo(str(err), err=True)
