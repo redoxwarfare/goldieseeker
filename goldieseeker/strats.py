@@ -1,4 +1,4 @@
-from .GusherMap import GusherMap, split, BASKET_LABEL
+from .GusherMap import GusherMap, BASKET_LABEL
 from .GusherNode import GusherNode, NEVER_FIND_FLAG, write_tree
 from copy import deepcopy
 
@@ -27,7 +27,9 @@ def get_strat_greedy(gusher_map):
         vertex = min(candidates, key=lambda v: abs(suspected.degree[v] - n/2))
 
         # Build subtrees
-        suspect_if_high, suspect_if_low = split(suspected, vertex)
+        suspect_if_high = set(gusher_map.adj(vertex))
+        suspect_if_low = set(gusher_map).difference(suspect_if_high)
+        suspect_if_low.remove(vertex)
         high = recurse(suspect_if_high)
         low = recurse(suspect_if_low)
 
@@ -67,7 +69,7 @@ def get_strat(gushers, start=BASKET_LABEL, tuning=0.5, all_distances=None, all_w
         """Return the optimal subtree to follow given a set of suspected gushers, a set of opened gushers,
         and the most recently opened gusher."""
         # First 3 arguments refer to gushers using strings, but recurse() returns a GusherNode
-        # suspected = subgraph of unopened gushers that might have the Goldie
+        # suspected = set of unopened gushers that might have the Goldie
         # opened = set of opened gushers
         # latest_open = most recently opened gusher
 
@@ -76,7 +78,7 @@ def get_strat(gushers, start=BASKET_LABEL, tuning=0.5, all_distances=None, all_w
         if n == 0:
             return None
         if n == 1:
-            return GusherNode(list(suspected.nodes)[0], gushers)
+            return GusherNode(list(suspected)[0], gushers)
 
         candidates = list()
         key = (frozenset(suspected), frozenset(opened))
@@ -89,11 +91,12 @@ def get_strat(gushers, start=BASKET_LABEL, tuning=0.5, all_distances=None, all_w
             for vertex in search_set:
                 findable = vertex in suspected
                 neighborhood = set(gushers.adj(vertex))
-                if not findable and (neighborhood.issuperset(suspected) or neighborhood.isdisjoint(suspected)):
+                suspect_if_high = suspected.intersection(neighborhood)
+                suspect_if_low = suspected.difference({vertex}).difference(neighborhood)
+                # Don't open non-suspected gushers that are adjacent to all/none of the suspected gushers
+                # Opening them can neither find the Goldie nor provide additional information about the Goldie
+                if not findable and not (suspect_if_high and suspect_if_low):
                     continue
-                    # Don't open non-suspected gushers that are adjacent to all/none of the suspected gushers
-                    # Opening them can neither find the Goldie nor provide additional information about the Goldie
-                suspect_if_high, suspect_if_low = split(suspected, vertex, neighborhood)
                 print_log(f'{key_str}; check gusher {vertex}{flag(findable)}\n'
                           f'    adj: {tuple(suspect_if_high)}\n'
                           f'    non-adj: {tuple(suspect_if_low)}')
@@ -125,7 +128,7 @@ def get_strat(gushers, start=BASKET_LABEL, tuning=0.5, all_distances=None, all_w
 
     print_log(f"(U | ~O) means gushers in U could have Goldie, gushers in O have already been opened\n"
               f"------------------------------------------------------------------------------------")
-    root = recurse(gushers.connections, set(), start, solved_subgraphs)
+    root = recurse(set(gushers), set(), start, solved_subgraphs)
     root.update_costs(gushers, start=start)
     return root
 

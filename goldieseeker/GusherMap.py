@@ -160,19 +160,6 @@ class GusherMap:
         plt.show()
 
 
-def split(graph, vertex, adj=None):
-    """Split graph into two subgraphs: nodes adjacent to vertex V, and nodes not adjacent to V."""
-    if not adj:
-        adj = graph.adj[vertex]
-    adj_subgraph = graph.subgraph(adj)  # subgraph of vertices adjacent to V
-
-    non_adj = set(graph).difference(adj_subgraph)
-    non_adj = non_adj.difference({vertex})
-    non_adj_subgraph = graph.subgraph(non_adj)  # subgraph of vertices non-adjacent to V (excluding V)
-
-    return adj_subgraph, non_adj_subgraph
-
-
 # TODO - move to separate test file
 if __name__ == '__main__':
     for map_id in ('sg', 'ss', 'mb', 'lo', 'ap'):
