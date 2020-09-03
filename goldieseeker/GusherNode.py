@@ -56,10 +56,7 @@ class GusherNode:
             yield from self.low.__iter__()
 
     def __eq__(self, other):
-        if not other:
-            return False
-        else:
-            return self.name == other.name and self.weight == other.weight and self.findable == other.findable
+        return isinstance(other, GusherNode) and write_tree(self) == write_tree(other)
 
     # Override deepcopy so that it does not copy non-root nodes' cost attributes (weight, size, latency, etc.)
     # This improves performance without sacrificing any accuracy
