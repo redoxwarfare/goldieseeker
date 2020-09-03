@@ -77,21 +77,6 @@ class GusherNode:
             tree_copy.low.parent = tree_copy
         return tree_copy
 
-    def is_same_tree(self, other):
-        if not other:
-            return False
-        if not (self == other):
-            return False
-        if self.high:
-            same_high = self.high.is_same_tree(other.high)
-        else:
-            same_high = not other.high
-        if self.low:
-            same_low = self.low.is_same_tree(other.low)
-        else:
-            same_low = not other.low
-        return same_high and same_low
-
     def add_children(self, high, low, dist_h=1, dist_l=1):
         size_h, size_l = 0, 0
         totlat_h, totlat_l = 0, 0
@@ -171,7 +156,7 @@ class GusherNode:
                                                 f'should be {node.name + NEVER_FIND_FLAG}')
 
             if node.high or node.low:
-                pred_new = predecessors.union(set(node.name))
+                pred_new = predecessors.union({node.name})
                 if gusher_map:
                     neighborhood = set(gusher_map.adj(node.name))
                 else:

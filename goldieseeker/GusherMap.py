@@ -108,7 +108,7 @@ class GusherMap:
             neighborhood = set(self.distances.adj[vertex])
             for neighbor in neighborhood:
                 shortest_distance = distance(vertex, neighbor)
-                for other in neighborhood.difference(set(neighbor)):
+                for other in neighborhood.difference({neighbor}):
                     other_distance = distance(vertex, other) + distance(other, neighbor)
                     if other_distance < shortest_distance:
                         violations.add((vertex, other, neighbor, other_distance, shortest_distance))
