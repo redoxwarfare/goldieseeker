@@ -65,13 +65,12 @@ def get_strat(gushers, start=BASKET_LABEL, tuning=0.5, all_distances=None, all_w
     # dict that associates a subgraph with its solution subtrees and their objective scores
     # stores deep copies of trees to avoid entangling references between different candidates
 
-    def recurse(suspected, opened, latest_open, solved):
+    def recurse(suspected, opened, solved):
         """Return the optimal subtree to follow given a set of suspected gushers, a set of opened gushers,
         and the most recently opened gusher."""
         # First 3 arguments refer to gushers using strings, but recurse() returns a GusherNode
         # suspected = set of unopened gushers that might have the Goldie
-        # opened = set of opened gushers
-        # latest_open = most recently opened gusher
+        # opened = tuple of opened gushers in the order they were opened
 
         # Base cases
         n = len(suspected)
@@ -81,7 +80,7 @@ def get_strat(gushers, start=BASKET_LABEL, tuning=0.5, all_distances=None, all_w
             return GusherNode(list(suspected)[0], gushers)
 
         candidates = list()
-        key = (frozenset(suspected), frozenset(opened))
+        key = (frozenset(suspected), opened)
         key_str = f'({", ".join(str(u) for u in suspected)} | {", ".join(f"~{o}" for o in opened)})'
         if key in solved:  # Don't recalculate subtrees for subgraphs we've already solved
             candidates = deepcopy(solved[key])
@@ -100,9 +99,9 @@ def get_strat(gushers, start=BASKET_LABEL, tuning=0.5, all_distances=None, all_w
                 print_log(f'{key_str}; check gusher {vertex}{flag(findable)}\n'
                           f'    adj: {tuple(suspect_if_high)}\n'
                           f'    non-adj: {tuple(suspect_if_low)}')
-                opened_new = opened.union({vertex})
-                high = recurse(suspect_if_high, opened_new, vertex, solved)
-                low = recurse(suspect_if_low, opened_new, vertex, solved)
+                opened_new = opened + tuple(vertex)
+                high = recurse(suspect_if_high, opened_new, solved)
+                low = recurse(suspect_if_low, opened_new, solved)
                 dist_h, dist_l = 1, 1
                 if high:
                     dist_h = distance(vertex, high.name)
@@ -116,6 +115,7 @@ def get_strat(gushers, start=BASKET_LABEL, tuning=0.5, all_distances=None, all_w
                           f'    score: {score(root.total_latency, root.total_risk):g}\n')
             solved[key] = deepcopy(candidates)
 
+        latest_open = opened[-1]
         root = min(candidates, key=lambda tree: score(*candidate_cost(tree, latest_open)))
         print_log(f'{key_str}; options: \n' +
                   '\n'.join(f'    ~{latest_open}--{distance(latest_open, tree.name):0.2f}--> ' +
@@ -128,7 +128,7 @@ def get_strat(gushers, start=BASKET_LABEL, tuning=0.5, all_distances=None, all_w
 
     print_log(f"(U | ~O) means gushers in U could have Goldie, gushers in O have already been opened\n"
               f"------------------------------------------------------------------------------------")
-    root = recurse(set(gushers), set(), start, solved_subgraphs)
+    root = recurse(set(gushers), tuple(start), solved_subgraphs)
     root.update_costs(gushers, start=start)
     return root
 
