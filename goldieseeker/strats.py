@@ -80,7 +80,7 @@ def get_strat(gushers, start=BASKET_LABEL, tuning=0.5, all_distances=None, all_w
             return GusherNode(list(suspected)[0], gushers)
 
         candidates = list()
-        key = (frozenset(suspected), opened)
+        key = (frozenset(suspected), frozenset(opened))
         key_str = f'({", ".join(str(u) for u in suspected)} | {", ".join(f"~{o}" for o in opened)})'
         if key in solved:  # Don't recalculate subtrees for subgraphs we've already solved
             candidates = deepcopy(solved[key])
