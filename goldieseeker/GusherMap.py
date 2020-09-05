@@ -4,6 +4,7 @@ from ast import literal_eval
 from numpy import genfromtxt, minimum
 from scipy.spatial.distance import cdist
 import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
 import warnings
 
 # Special characters for parsing files
@@ -19,6 +20,28 @@ EXTENTS = {'ap': (660, 300, 760),
            'mb': (570, 260, 870),
            'sg': (888, 640, 850),
            'ss': (363, 526, 720)}
+
+# Colormap for plotting strategies
+HIGH_CDICT = {'red':   [[0.0, 1.0, 1.0],
+                        [1.0, 1.0, 1.0]],
+              'green': [[0.0, 0.8, 0.8],
+                        [0.6, 0.8, 0.8],
+                        [1.0, 1.0, 1.0]],
+              'blue':  [[0.0, 0.0, 0.0],
+                        [0.6, 0.0, 0.0],
+                        [1.0, 0.6, 0.6]]}
+
+LOW_CDICT =  {'red':   [[0.0, 0.0, 0.0],
+                        [0.6, 0.0, 0.0],
+                        [1.0, 0.6, 0.6]],
+              'green': [[0.0, 0.7, 0.7],
+                        [1.0, 0.9, 0.9]],
+              'blue':  [[0.0, 0.2, 0.2],
+                        [0.6, 0.3, 0.3],
+                        [1.0, 0.7, 0.7]]}
+
+high_cmap = LinearSegmentedColormap('HighPath', segmentdata=HIGH_CDICT, N=256)
+low_cmap = LinearSegmentedColormap('LowPath', segmentdata=LOW_CDICT, N=256)
 
 
 # noinspection PyTypeChecker,PyTypeChecker
@@ -144,7 +167,7 @@ class GusherMap:
         """Return the number of adjacent gushers for a given gusher."""
         return self.connections.degree[vertex]
 
-    def plot(self):
+    def plot(self, strategy=None):
         background = plt.imread(str(self._path.parent.parent.resolve()/f'images/{self.map_id}.png'))
         pos = {gusher['name']: tuple(gusher['coord']) for gusher in self._gushers if gusher['name'] != BASKET_LABEL}
         pos_attrs = {node: (coord[0] - 40, coord[1]) for (node, coord) in pos.items()}
@@ -157,12 +180,36 @@ class GusherMap:
             extent = None
 
         plt.figure()
+        ax = plt.subplot()
+        ax.set_facecolor('#555555')
         plt.imshow(background, extent=extent)
         plt.title(self.name)
-        nx.draw_networkx(self.connections, pos,
-                         node_color='#1a611b', edge_color='#35cc37', font_color='#ffffff', arrows=False)
+        nx.draw_networkx_edges(nx.to_undirected(self.connections), pos,
+                               edge_color='#888888', style='dashed', width=1.5)
         nx.draw_networkx_labels(self.connections, pos_attrs, labels={gusher: self.weight(gusher) for gusher in pos},
                                 font_weight='bold', font_color='#ff4a4a', horizontalalignment='right')
+
+        if strategy:
+            strat_graph = nx.to_networkx_graph(strategy.get_adj_dict(), create_using=nx.DiGraph)
+            node_colors = ['#2bff2b' if node == strategy.name else '#ffffff' for node in strat_graph.nodes]
+            # edge_colors = ['#ffdf40' if strat_graph[s][t]['adj'] else '#18a819' for s, t in strat_graph.edges]
+            high_edges = [(s, t) for s, t in strat_graph.edges if strat_graph[s][t]['adj']]
+            high_colors = [strat_graph[s][t]['depth'] for s, t in high_edges]
+            low_edges = [(s, t) for s, t in strat_graph.edges if not strat_graph[s][t]['adj']]
+            low_colors = [strat_graph[s][t]['depth'] for s, t in low_edges]
+            color_kwargs = ({'edgelist':  high_edges, 'edge_color': high_colors, 'edge_cmap': high_cmap},
+                            {'edgelist': low_edges, 'edge_color': low_colors, 'edge_cmap': low_cmap})
+            for kwargs in color_kwargs:
+                nx.draw_networkx_edges(strat_graph, pos,
+                                       width=2, connectionstyle='arc3, rad=0.25', min_target_margin=12,
+                                       arrowstyle='simple, head_length=1.2, head_width=1.2', **kwargs)
+
+            nx.draw_networkx_nodes(strat_graph, pos, node_color=node_colors)
+        else:
+            nx.draw_networkx_nodes(self.connections, pos, node_color='#ffffff')
+
+        nx.draw_networkx_labels(self.connections, pos, labels={gusher: gusher for gusher in pos}, font_color='#111111')
+
         plt.show()
 
 

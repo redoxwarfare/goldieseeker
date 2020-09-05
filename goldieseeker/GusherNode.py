@@ -203,12 +203,12 @@ class GusherNode:
             if node.parent:
                 depth = adj_dict[node.parent.name][node.name]['depth']
             else:
-                depth = 0
+                depth = 1
             children_dict = {}
             if node.high:
-                children_dict[node.high.name] = {'depth': depth + 1}
+                children_dict[node.high.name] = {'depth': depth*2, 'adj': 1}
             if node.low:
-                children_dict[node.low.name] = {'depth': depth + 1}
+                children_dict[node.low.name] = {'depth': depth*2, 'adj': 0}
             adj_dict[node.name] = children_dict
         return adj_dict
 

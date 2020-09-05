@@ -92,6 +92,7 @@ def get_strat(gushers, start=BASKET_LABEL, tuning=0.5, all_distances=None, all_w
                 neighborhood = set(gushers.adj(vertex))
                 suspect_if_high = suspected.intersection(neighborhood)
                 suspect_if_low = suspected.difference({vertex}).difference(neighborhood)
+                # suspect_if_high, suspect_if_low = split(suspected.difference({vertex}), neighborhood)
                 # Don't open non-suspected gushers that are adjacent to all/none of the suspected gushers
                 # Opening them can neither find the Goldie nor provide additional information about the Goldie
                 if not findable and not (suspect_if_high and suspect_if_low):

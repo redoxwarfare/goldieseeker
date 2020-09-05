@@ -67,7 +67,7 @@ def main(map_id, tuning, squad, strategy_str, weights, quiet, debug):
             # strat.validate(gusher_map)
         click.echo(strat.report(gusher_map, quiet=quiet))
         if quiet < 1:
-            gusher_map.plot()
+            gusher_map.plot(strat)
 
 
 if __name__ == '__main__':
