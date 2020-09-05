@@ -23,12 +23,12 @@ EXTENTS = {'ap': (660, 300, 760),
 
 # noinspection PyTypeChecker,PyTypeChecker
 class GusherMap:
-    def __init__(self, map_id, weights=None, squad=False, norm=2):
+    def __init__(self, map_id, weights=None, squad=False):
         self.map_id = map_id
         self._path = pathlib.Path(__file__).parent.resolve() / f'maps/{map_id}'
 
         self._load_gushers(str(self._path/'gushers.csv'))
-        self._load_distances(str(self._path/'distance_modifiers.txt'), squad, norm)
+        self._load_distances(str(self._path/'distance_modifiers.txt'), squad)
         self._validate_distances()
         self._load_connections(str(self._path/'connections.txt'))
         if not weights:
@@ -42,8 +42,13 @@ class GusherMap:
     def _load_gushers(self, filename):
         self._gushers = genfromtxt(filename, delimiter=',', names=['name', 'coord'], dtype=['U8', '2u4'])
 
-    def _load_distances(self, filename, squad=False, norm=2):
+    def _load_distances(self, filename, squad=False):
         coords = self._gushers['coord']
+        # Read norm from the 2nd line of the file
+        with open(filename) as f:
+            f.readline()
+            norm_raw = f.readline().split(': ')[-1].strip(' \n')
+        norm = float(norm_raw)
         adjacency_matrix = cdist(coords, coords, 'minkowski', p=norm) / DISTANCE_SCALE_FACTOR
         try:
             distance_modifiers = genfromtxt(filename, delimiter=',', comments=COMMENT_CHAR)
@@ -156,7 +161,7 @@ class GusherMap:
         plt.title(self.name)
         nx.draw_networkx(self.connections, pos,
                          node_color='#1a611b', edge_color='#35cc37', font_color='#ffffff', arrows=False)
-        nx.draw_networkx_labels(self.connections, pos_attrs, labels={gusher: self.weights[gusher] for gusher in pos},
+        nx.draw_networkx_labels(self.connections, pos_attrs, labels={gusher: self.weight(gusher) for gusher in pos},
                                 font_weight='bold', font_color='#ff4a4a', horizontalalignment='right')
         plt.show()
 
@@ -168,6 +173,6 @@ if __name__ == '__main__':
         print('-'*len(gusher_map.name))
         print(gusher_map.name)
         for node in gusher_map:
-            print(f"gusher {node} (weight {gusher_map.weights[node]:g}) is adjacent to " +
+            print(f"gusher {node} (weight {gusher_map.weight(node):g}) is adjacent to " +
                   ', '.join(f"{v} ({e['weight']:0.2f})" for v, e in gusher_map.adj(node).items()))
         gusher_map.plot()

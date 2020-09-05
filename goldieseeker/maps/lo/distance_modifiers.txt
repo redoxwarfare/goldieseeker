@@ -1,4 +1,5 @@
 # Lost Outpost
+# norm: 1.5
 # row: gusher you are coming from
 # column: gusher you are going to
 #     @,      a,      b,      c,      d,      e,      f,      g,      h,      i
