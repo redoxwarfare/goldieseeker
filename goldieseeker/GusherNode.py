@@ -103,6 +103,9 @@ class GusherNode:
     def findable_nodes(self):
         return (node for node in self if node.findable)
 
+    def nonfindable_nodes(self):
+        return (node for node in self if not node.findable)
+
     def update_costs(self, gusher_map=None, start=BASKET_LABEL):
         """Update distances, latencies and risks of this node's descendants. Should be called on root of tree."""
         def recurse(node, parent_latency, total_predecessor_weight):
@@ -198,18 +201,23 @@ class GusherNode:
         return output
 
     def get_adj_dict(self):
-        adj_dict = dict()
+        adj_dict = {str(node): dict() for node in self}
         for node in self:
             if node.parent:
-                depth = adj_dict[node.parent.name][node.name]['depth']
+                depth = adj_dict[str(node.parent)][str(node)]['depth']
             else:
                 depth = 1
-            children_dict = {}
-            if node.high:
-                children_dict[node.high.name] = {'depth': depth*2, 'adj': 1}
-            if node.low:
-                children_dict[node.low.name] = {'depth': depth*2, 'adj': 0}
-            adj_dict[node.name] = children_dict
+            if node.high and node.low:
+                children = {str(node.high): {'depth': depth*2, 'high': 1},
+                            str(node.low): {'depth': depth*2, 'high': 0}}
+            elif node.high:
+                children = {str(node.high): {'depth': depth*2, 'high': 1}}
+            elif node.low:
+                children = {str(node.low): {'depth': depth*2, 'high': 0}}
+            else:
+                children = {}
+            adj_dict[str(node)].update(children)
+
         return adj_dict
 
 

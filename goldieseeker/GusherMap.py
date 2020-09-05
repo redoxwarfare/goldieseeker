@@ -181,7 +181,7 @@ class GusherMap:
 
         plt.figure()
         ax = plt.subplot()
-        ax.set_facecolor('#555555')
+        ax.set_facecolor('#444444')
         plt.imshow(background, extent=extent)
         plt.title(self.name)
         nx.draw_networkx_edges(nx.to_undirected(self.connections), pos,
@@ -190,12 +190,23 @@ class GusherMap:
                                 font_weight='bold', font_color='#ff4a4a', horizontalalignment='right')
 
         if strategy:
+            nonfindable = tuple(strategy.nonfindable_nodes())
+            nonfindable_str = tuple(str(node) for node in nonfindable)
+            if nonfindable:
+                pos.update({str(node): (pos[node.name][0] + 50, pos[node.name][1]) for node in nonfindable})
             strat_graph = nx.to_networkx_graph(strategy.get_adj_dict(), create_using=nx.DiGraph)
-            node_colors = ['#2bff2b' if node == strategy.name else '#ffffff' for node in strat_graph.nodes]
-            # edge_colors = ['#ffdf40' if strat_graph[s][t]['adj'] else '#18a819' for s, t in strat_graph.edges]
-            high_edges = [(s, t) for s, t in strat_graph.edges if strat_graph[s][t]['adj']]
+
+            def node_color(node):
+                if node == strategy.name:
+                    return '#2bff2b'
+                elif node in nonfindable_str:
+                    return '#aaaaaa'
+                else:
+                    return '#ffffff'
+            node_colors = [node_color(node) for node in strat_graph.nodes]
+            high_edges = [(s, t) for s, t in strat_graph.edges if strat_graph[s][t]['high']]
             high_colors = [strat_graph[s][t]['depth'] for s, t in high_edges]
-            low_edges = [(s, t) for s, t in strat_graph.edges if not strat_graph[s][t]['adj']]
+            low_edges = [(s, t) for s, t in strat_graph.edges if not strat_graph[s][t]['high']]
             low_colors = [strat_graph[s][t]['depth'] for s, t in low_edges]
             color_kwargs = ({'edgelist':  high_edges, 'edge_color': high_colors, 'edge_cmap': high_cmap},
                             {'edgelist': low_edges, 'edge_color': low_colors, 'edge_cmap': low_cmap})
