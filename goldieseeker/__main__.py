@@ -61,7 +61,7 @@ def main(map_id, tuning, squad, strategy_str, weights, quiet, debug):
     else:
         if strategy_str:
             strat = read_tree(strategy_str, gusher_map)
-            strat.validate(gusher_map)  # TODO -- catch ValidationErrors and suggest corrections
+            strat.validate(gusher_map)
         else:
             strat = get_strat(gusher_map, tuning=tuning, debug=debug)
             # strat.validate(gusher_map)
