@@ -179,14 +179,17 @@ class GusherNode:
 
         recurse(self, set(), set(gusher_map) if gusher_map else set())
 
-    def report(self, gusher_map=None, quiet=0):
+    def get_costs(self, gusher_map=None):
         self.update_costs(gusher_map)
+        latencies = {str(node): node.latency for node in self.findable_nodes()}
+        risks = {str(node): node.risk for node in self.findable_nodes()}
+        return latencies, risks
 
+    def report(self, gusher_map=None, quiet=0):
         short_str = write_tree(self)
         long_str = write_instructions(self) + '\n'
 
-        latencies = {str(node): node.latency for node in self.findable_nodes()}
-        risks = {str(node): node.risk for node in self.findable_nodes()}
+        latencies, risks = self.get_costs(gusher_map)
         cost_long = f"times: {{{', '.join(f'{node}: {time:0.2f}' for node, time in sorted(latencies.items()))}}}\n"\
                     f"risks: {{{', '.join(f'{node}: {risk:0.2f}' for node, risk in sorted(risks.items()))}}}\n"
         cost_short = f"avg. time: {mean(latencies.values()):0.2f} +/- {pstdev(latencies.values()):0.2f}\n"\

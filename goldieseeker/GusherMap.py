@@ -5,6 +5,7 @@ from numpy import genfromtxt, minimum
 from scipy.spatial.distance import cdist
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
+from statistics import mean
 import warnings
 
 # Special characters for parsing files
@@ -65,6 +66,7 @@ class GusherMap:
     def _load_gushers(self, filename):
         self._gushers = genfromtxt(filename, delimiter=',', names=['name', 'coord'], dtype=['U8', '2u4'])
 
+    # TODO - use tkg's exact distances
     def _load_distances(self, filename, squad=False):
         coords = self._gushers['coord']
         # Read norm from the 2nd line of the file
@@ -167,7 +169,7 @@ class GusherMap:
         """Return the number of adjacent gushers for a given gusher."""
         return self.connections.degree[vertex]
 
-    def plot(self, strategy=None):
+    def plot(self, strategy=None, tuning=0.5):
         background = plt.imread(str(self._path.parent.parent.resolve()/f'images/{self.map_id}.png'))
         pos = {gusher['name']: tuple(gusher['coord']) for gusher in self._gushers if gusher['name'] != BASKET_LABEL}
         pos_attrs = {node: (coord[0] - 40, coord[1]) for (node, coord) in pos.items()}
@@ -179,7 +181,7 @@ class GusherMap:
         else:
             extent = None
 
-        plt.figure()
+        fig = plt.figure(figsize=(6, 6))
         ax = plt.subplot()
         ax.set_facecolor('#444444')
         plt.imshow(background, extent=extent)
@@ -190,6 +192,16 @@ class GusherMap:
                                 font_weight='bold', font_color='#ff4a4a', horizontalalignment='right')
 
         if strategy:
+            latencies, risks = strategy.get_costs(self)
+            key = f"setting: {100*(1-tuning):g}% speed, {100*tuning:g}% safety\n" \
+                  f"average time: {mean(latencies.values()):0.2f}, worst time: {max(latencies.values()):0.2f}\n" \
+                  f"average risk: {mean(risks.values()):0.2f}, worst risk: {max(risks.values()):0.2f}"
+            # https://stackoverflow.com/a/32745842
+            ax.annotate(key, xy=(0, 0), xytext=(0, 10),
+                        xycoords=('axes fraction', 'figure fraction'),
+                        textcoords='offset points',
+                        size=10, ha='left', va='bottom')
+
             nonfindable = tuple(strategy.nonfindable_nodes())
             nonfindable_str = tuple(str(node) for node in nonfindable)
             if nonfindable:
