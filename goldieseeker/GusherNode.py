@@ -197,6 +197,21 @@ class GusherNode:
             output += cost_short
         return output
 
+    def get_adj_dict(self):
+        adj_dict = dict()
+        for node in self:
+            if node.parent:
+                depth = adj_dict[node.parent.name][node.name]['depth']
+            else:
+                depth = 0
+            children_dict = {}
+            if node.high:
+                children_dict[node.high.name] = {'depth': depth + 1}
+            if node.low:
+                children_dict[node.low.name] = {'depth': depth + 1}
+            adj_dict[node.name] = children_dict
+        return adj_dict
+
 
 # Custom exception for invalid strategy trees
 class ValidationError(Exception):
