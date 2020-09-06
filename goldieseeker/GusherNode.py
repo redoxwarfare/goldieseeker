@@ -142,7 +142,7 @@ class GusherNode:
         """Check that tree is a valid strategy tree."""
         def recurse(node, predecessors, possible_nodes):
             # can't open the same gusher twice
-            if str(node) in predecessors:
+            if node.name in predecessors:
                 raise ValidationError(node, f'gusher {node} already in set of opened gushers: {predecessors}')
 
             if possible_nodes:
@@ -156,6 +156,8 @@ class GusherNode:
                                                 f'should be {node.name + NEVER_FIND_FLAG}')
 
             if node.high or node.low:
+                if not possible_nodes:
+                    raise ValidationError(node, f'Goldie should have been found after opening gusher {node}')
                 pred_new = predecessors.union({node.name})
                 if gusher_map:
                     neighborhood = set(gusher_map.adj(node.name))
@@ -164,11 +166,11 @@ class GusherNode:
 
                 # make sure parent/child references are consistent
                 if node.high:
-                    assert node.high.parent == node, f'node = {node}, node.high = {node.high}, ' \
+                    assert node.high.parent is node, f'node = {node}, node.high = {node.high}, ' \
                                                      f'node.high.parent = {node.high.parent}'
                     recurse(node.high, pred_new, possible_nodes.intersection(neighborhood))
                 if node.low:
-                    assert node.low.parent == node, f'node = {node}, node.low = {node.low}, ' \
+                    assert node.low.parent is node, f'node = {node}, node.low = {node.low}, ' \
                                                     f'node.low.parent = {node.low.parent}'
                     recurse(node.low, pred_new, possible_nodes.difference(neighborhood))
             else:
@@ -177,6 +179,11 @@ class GusherNode:
                     raise ValidationError(node, f'Goldie could still be in gushers {possible_nodes} '
                                                 f'after opening gusher {node}')
 
+        if gusher_map:
+            unaccounted = set(gusher_map).difference(node.name for node in self.findable_nodes())
+            if unaccounted:
+                raise ValidationError(self, 'Strategy is not guaranteed to find Goldie if hiding in gushers ' +
+                                            ', '.join(unaccounted))
         recurse(self, set(), set(gusher_map) if gusher_map else set())
 
     def get_costs(self, gusher_map=None):
@@ -250,8 +257,8 @@ node = Regex(rf'\w+[{NEVER_FIND_FLAG}]?')
 LPAREN, COMMA, RPAREN = map(Suppress, '(,)')
 tree = Forward()
 subtree = Group(Optional(tree))
-subtrees = LPAREN + subtree.setResultsName('high') + COMMA + subtree.setResultsName('low') + RPAREN
-tree << node.setResultsName('root') + Optional(subtrees)
+subtrees = LPAREN - subtree.setResultsName('high') - COMMA - subtree.setResultsName('low') - RPAREN
+tree << node.setResultsName('root') - Optional(subtrees)
 
 
 def read_tree(tree_str, gusher_map, start=BASKET_LABEL):
@@ -286,7 +293,7 @@ def read_tree(tree_str, gusher_map, start=BASKET_LABEL):
                 root.add_children(high=high, low=low, dist_h=dist_h, dist_l=dist_l)
             return root
 
-    tokens = tree.parseString(tree_str)
+    tokens = tree.parseString(tree_str, parseAll=True)
     root = build_tree(tokens)
     root.calc_tree_score(gusher_map, start)
     return root
