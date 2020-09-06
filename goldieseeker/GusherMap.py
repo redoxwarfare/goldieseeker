@@ -35,10 +35,10 @@ HIGH_CDICT = {'red':   [[0.0, 1.0, 1.0],
 LOW_CDICT =  {'red':   [[0.0, 0.0, 0.0],
                         [0.6, 0.0, 0.0],
                         [1.0, 0.6, 0.6]],
-              'green': [[0.0, 0.7, 0.7],
+              'green': [[0.0, 0.6, 0.6],
                         [1.0, 0.9, 0.9]],
-              'blue':  [[0.0, 0.2, 0.2],
-                        [0.6, 0.3, 0.3],
+              'blue':  [[0.0, 0.3, 0.3],
+                        [0.6, 0.4, 0.4],
                         [1.0, 0.7, 0.7]]}
 
 high_cmap = LinearSegmentedColormap('HighPath', segmentdata=HIGH_CDICT, N=256)
@@ -193,9 +193,10 @@ class GusherMap:
 
         if strategy:
             latencies, risks = strategy.get_costs(self)
-            key = f"setting: {100*(1-tuning):g}% speed, {100*tuning:g}% safety\n" \
-                  f"average time: {mean(latencies.values()):0.2f}, worst time: {max(latencies.values()):0.2f}\n" \
+            key = f"average time: {mean(latencies.values()):0.2f}, worst time: {max(latencies.values()):0.2f}\n" \
                   f"average risk: {mean(risks.values()):0.2f}, worst risk: {max(risks.values()):0.2f}"
+            if tuning is not None:
+                key = f"setting: {100*(1 - tuning):g}% speed, {100*tuning:g}% safety\n" + key
             # https://stackoverflow.com/a/32745842
             ax.annotate(key, xy=(0, 0), xytext=(0, 10),
                         xycoords=('axes fraction', 'figure fraction'),
